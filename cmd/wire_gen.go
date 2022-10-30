@@ -8,6 +8,7 @@ package main
 
 import (
 	"ult/config"
+	"ult/internal/router"
 	"ult/internal/server"
 	"ult/pkg/global"
 	"ult/pkg/logger"
@@ -17,7 +18,8 @@ import (
 
 // initApp init application.
 func initApp(conf *config.Config, log *logger.Logger, repo global.DataRepo) (*global.App, func(), error) {
-	httpServer := server.NewHTTPServer(conf, log, repo)
+	httpRouter := router.NewHTTPRouter()
+	httpServer := server.NewHTTPServer(conf, log, repo, httpRouter)
 	app := newApp(conf, log, httpServer)
 	return app, func() {
 	}, nil

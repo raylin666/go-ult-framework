@@ -15,7 +15,10 @@ import (
 	"ult/pkg/logger"
 )
 
-func newApp(config *config.Config, logger *logger.Logger, hs *http.HTTPServer) *global.App {
+func newApp(
+	config *config.Config,
+	logger *logger.Logger,
+	hs *http.HTTPServer) *global.App {
 	var appCtx = context.Background()
 	var appCancel = func() {}
 	return global.NewApp(
