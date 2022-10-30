@@ -128,6 +128,9 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 		return
 	}
 
+	// 获取链路追踪 TraceId
+	traceId = appctx.TraceID()
+
 	// 发生错误, 进行返回
 	if ctx.IsAborted() {
 		if err := appctx.getAbortError(); err != nil {

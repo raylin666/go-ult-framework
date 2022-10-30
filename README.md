@@ -19,7 +19,9 @@
 | gorm | 数据库组件 (支持 `gen` 和 `DIY` 生成文件) |
 | go-redis | redis 组件 |
 | JWT | 鉴权组件 |
+| validator | 数据校验 |
 | qiniu | 上传文件 |
+| uuid | 唯一值生成 |
 | dingTalk | 钉钉机器人 |
 | gomail | 邮件发送 |
 | wire | 依赖注入 |
@@ -32,7 +34,6 @@
 | --- | --- | --- |
 | cmd | 项目启动 | 存放项目启动文件及依赖注入绑定 |
 | config | 配置文件 |  |
-| docs | 使用文档 |  |
 | internal | 内部文件 | 存放项目业务开发文件 |
 | pkg | 通用封装包 | 存放项目通用封装逻辑, 代码实现隔离项目内部业务 |
 | static | 静态文件 | 比如图片、描述性文件、数据库SQL等 |
@@ -55,6 +56,8 @@
 
 > make run
 
+访问服务 `curl 127.0.0.1:10001/heartbeat` , 返回 `200` 状态码则表示成功。
+
 ### 编译执行文件 (需要有 .git 提交版本, 你也可以修改 `Makefile` 文件来取消这个限制)
 
 > make build
@@ -63,4 +66,17 @@
 
 <hr />
 
-具体开发使用文档可到 `docs` 目录查看哦 ～
+### 规范约束
+
+> `api` 处理层尽量避免使用 `配置(config)`、`数据仓库(dataRepo)`，职责上它只需要做 `数据校验` 和 `数据响应`。
+> `pkg` 通用封装包内逻辑不允许调用 `internal` 内部包代码, 实现代码逻辑隔离, 也避免调用外部代码导致耦合。
+
+### 创建新模块
+
+> 以 `heartbeat` 为例: 
+1. 在 `internal/router`、`internal/api` 和 `internal/service` 模块分别复制 `heartbeat` 文件, 并依次重命名为新模块名称。
+2. 修改 `internal/router/router.go` 文件, 在结构体 `httpRouter.handle` 里添加新模块接口映射；然后在 `NewHTTPRouter` 里的注册处理器添加实例化；最后新增路由注册, 例如: `r.heartbeat(r.g.Group("/heartbeat"))` 。
+3. 此时新模块就创建好了, 运行项目就可以访问对应的路由～
+
+### 数据库模块
+

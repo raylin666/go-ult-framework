@@ -5,6 +5,7 @@ import (
 	stdCtx "context"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/google/uuid"
 	"github.com/raylin666/go-utils/validator"
 	"io/ioutil"
 	"net/http"
@@ -15,10 +16,13 @@ import (
 )
 
 const (
+	headerXTraceIdName = "X-Trace-Id"
+
 	_BodyName_       = "_body_"
 	_PayloadName_    = "_payload_"
 	_AbortErrorName_ = "_abort_error_"
 	_ValidatorName_  = "_validator_"
+	_TraceIdName_    = "_trace_id_"
 )
 
 type HandlerFunc func(ctx Context)
@@ -54,6 +58,9 @@ type Context interface {
 
 	// Param 获取路径参数
 	Param(key string) string
+
+	// TraceID 获取链路追踪ID
+	TraceID() string
 
 	// Validator 数据验证器
 	Validator(req interface{}) bool
@@ -147,8 +154,25 @@ func (c *context) Param(key string) string {
 	return c.ctx.Param(key)
 }
 
+// Redirect 重定向
 func (c *context) Redirect(code int, location string) {
 	c.ctx.Redirect(code, location)
+}
+
+// TraceID 获取链路追踪ID
+func (c *context) TraceID() string {
+	traceId, ok := c.ctx.Get(_TraceIdName_)
+	if ok {
+		return traceId.(string)
+	}
+
+	var headerTraceId = c.GetHeader(headerXTraceIdName)
+	if len(headerTraceId) <= 0 {
+		headerTraceId = uuid.New().String()
+	}
+
+	c.ctx.Set(_TraceIdName_, headerTraceId)
+	return headerTraceId
 }
 
 func (c *context) Validator(req interface{}) (isErr bool) {
@@ -221,6 +245,7 @@ func (c *context) Header() http.Header {
 
 		clone[k] = value
 	}
+
 	return clone
 }
 
