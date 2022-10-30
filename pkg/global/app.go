@@ -12,7 +12,7 @@ import (
 var _ AppInterface = (*App)(nil)
 
 type AppInterface interface {
-	ID() int
+	ID() string
 	Name() string
 	Version() string
 	Environment() string
@@ -64,7 +64,7 @@ func NewApp(config *config.Config, logger *logger.Logger, opts ...AppOption) *Ap
 	return app
 }
 
-func (app *App) ID() int {
+func (app *App) ID() string {
 	return app.config.App.ID
 }
 
