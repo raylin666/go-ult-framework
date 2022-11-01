@@ -20,6 +20,11 @@ generate:
 wire:
 	cd ./cmd && $(GOPATH)/bin/wire
 
+.PHONY: gormgen
+# 生成数据库查询器文件
+gormgen:
+	cd generate/gormgen && go run main.go
+
 .PHONY: run
 # 开发环境启动项目
 run:

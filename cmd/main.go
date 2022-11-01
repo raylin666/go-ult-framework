@@ -44,7 +44,7 @@ func main() {
 
 	// 初始化错误状态码
 	code.New(conf.Language.Local)
-	errcode.RegisterTexts()
+	errcode.RegisterNewMerged()
 
 	// 初始化 Datetime
 	app.Datetime = system.NewDatetime(

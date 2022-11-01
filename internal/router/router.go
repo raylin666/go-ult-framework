@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/google/wire"
 	"ult/internal/api"
+	"ult/internal/data"
 	"ult/internal/service"
 	"ult/pkg/http"
 )
@@ -22,6 +23,9 @@ type httpRouter struct {
 // NewHTTPRouter 创建 HTTP 路由
 func NewHTTPRouter() HTTPRouter {
 	return func(hs *http.HTTPServer) {
+		// 数据仓库
+		var _ = data.NewDataRepo(hs.Logger(), hs.DataRepo())
+		// HTTP 路由
 		var r = &httpRouter{
 			// 创建路由组
 			g: hs.CreateRouterGroup(),

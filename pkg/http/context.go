@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"ult/internal/constant/errcode"
 	"ult/pkg/code"
+	pkg_context "ult/pkg/context"
 	"ult/pkg/errors"
 )
 
@@ -178,11 +180,7 @@ func (c *context) TraceID() string {
 func (c *context) Validator(req interface{}) (isErr bool) {
 	// 参数数据绑定
 	if err := c.ShouldBindForm(req); err != nil {
-		c.WithAbortError(errors.NewError(
-			http.StatusBadRequest,
-			code.ParamBindError,
-			code.Get().GetText(code.ParamBindError)).WithStackError(err))
-
+		c.WithAbortError(errcode.NewError(code.ParamValidateError).WithStackError(err))
 		return true
 	}
 
@@ -193,11 +191,7 @@ func (c *context) Validator(req interface{}) (isErr bool) {
 	}
 
 	if errStr := validate.(validator.Validator).Validate(req); errStr != "" {
-		c.WithAbortError(errors.NewError(
-			http.StatusUnprocessableEntity,
-			code.ParamValidateError,
-			errStr))
-
+		c.WithAbortError(errcode.NewError(code.ParamValidateError).WithDesc(errStr))
 		return true
 	}
 
@@ -306,7 +300,9 @@ func (c *context) URI() string {
 
 // RequestContext 获取请求的 Context (当client关闭后，会自动canceled)
 func (c *context) RequestContext() stdCtx.Context {
-	return c.ctx.Request.Context()
+	var reqContext = new(pkg_context.RequestContext)
+	reqContext.WithTraceID(c.TraceID())
+	return pkg_context.NewRequestContext(c.ctx.Request.Context(), reqContext)
 }
 
 // ResponseWriter 获取 ResponseWriter

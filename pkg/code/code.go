@@ -22,13 +22,16 @@ var (
 
 type Code interface {
 	WithTexts(local string, texts map[int]string) map[int]string
+	WithHttpCodes(codes map[int]int) map[int]int
 	GetText(code int) string
+	GetHttpCode(code int) int
 	GetError(code int) error
 }
 
 type code struct {
 	local     string
 	codeTexts map[int]string
+	httpCodes map[int]int
 }
 
 const (
@@ -53,6 +56,7 @@ func New(local string) Code {
 	var cd = &code{
 		local:     ZhCN,
 		codeTexts: zhCNText,
+		httpCodes: httpCode,
 	}
 
 	local = strings.ToLower(local)
@@ -83,8 +87,19 @@ func (c *code) WithTexts(local string, texts map[int]string) map[int]string {
 	return c.codeTexts
 }
 
+func (c *code) WithHttpCodes(codes map[int]int) map[int]int {
+	for key, value := range codes {
+		c.httpCodes[key] = value
+	}
+	return c.httpCodes
+}
+
 func (c *code) GetText(code int) string {
 	return c.codeTexts[code]
+}
+
+func (c *code) GetHttpCode(code int) int {
+	return c.httpCodes[code]
 }
 
 func (c *code) GetError(code int) error {

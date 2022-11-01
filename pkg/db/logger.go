@@ -9,6 +9,7 @@ import (
 	gorm_logger "gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 	"time"
+	pkg_context "ult/pkg/context"
 	"ult/pkg/logger"
 )
 
@@ -87,24 +88,32 @@ func (l *Logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 	}
 
 	var (
+		traceId string
 		sql  string
 		rows int64
 	)
+
+	// 请求链路追踪 TraceID
+	reqCtx, ok := pkg_context.FromRequestContext(ctx)
+	if ok {
+		traceId = reqCtx.TraceID()
+	}
 
 	elapsed := time.Since(begin)
 	elapsedStr := zap.String("elapsed", fmt.Sprintf("%.3fms", float64(elapsed.Nanoseconds())/1e6))
 	fileStr := zap.String("file", utils.FileWithLineNum())
 	rowsStr := func(rows int64) zap.Field { return zap.Int64("rows", rows) }
 	sqlStr := func(sql string) zap.Field { return zap.String("sql", sql) }
+	traceIdStr := func(traceId string) zap.Field { return zap.String("trace_id", traceId) }
 	switch {
 	case err != nil && l.logLevel >= gorm_logger.Error && (!l.ignoreRecordNotFoundError || !errors.Is(err, gorm.ErrRecordNotFound)):
 		sql, rows = fc()
-		l.l.UseSQL().Error("ERROR SQL", zap.Error(err), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql))
+		l.l.UseSQL().Error("ERROR SQL", zap.Error(err), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	case l.slowThreshold != 0 && elapsed > l.slowThreshold && l.logLevel >= gorm_logger.Warn:
 		sql, rows = fc()
-		l.l.UseSQL().Warn(fmt.Sprintf("SLOW SQL >= %v", l.slowThreshold), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql))
+		l.l.UseSQL().Warn(fmt.Sprintf("SLOW SQL >= %v", l.slowThreshold), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	case l.logLevel >= gorm_logger.Info:
 		sql, rows = fc()
-		l.l.UseSQL().Info("INFO SQL", fileStr, elapsedStr, rowsStr(rows), sqlStr(sql))
+		l.l.UseSQL().Info("INFO SQL", fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	}
 }

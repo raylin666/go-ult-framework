@@ -1,6 +1,7 @@
 package http
 
 import (
+	goerror "errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/raylin666/go-utils/validator"
@@ -9,8 +10,8 @@ import (
 	nethttp "net/http"
 	"runtime/debug"
 	"time"
+	"ult/internal/constant/errcode"
 	"ult/pkg/code"
-	"ult/pkg/errors"
 	"ult/pkg/global"
 	"ult/pkg/logger"
 )
@@ -101,13 +102,9 @@ func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	}
 
 	// 设置错误
-	appctx.WithAbortError(errors.NewError(
-		nethttp.StatusInternalServerError,
-		code.ServerError,
-		code.Get().GetText(code.ServerError)).WithStackError(
-		errors.NewOriginalError("got panic")))
+	appctx.WithAbortError(errcode.NewError(code.ServerError).WithStackError(goerror.New("got panic")))
 
-	// 发送告警提醒
+	// 设置告警提醒 (如发邮件通知、如钉钉告警)
 
 }
 
@@ -134,11 +131,11 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	// 发生错误, 进行返回
 	if ctx.IsAborted() {
 		if err := appctx.getAbortError(); err != nil {
-			stackErr = err.StackError()
 			httpCode = err.HTTPCode()
 			businessCode = err.BusinessCode()
 			businessMessage = err.Message()
-			// 发送告警提醒
+			stackErr = err.StackError()
+			// 设置告警提醒 (如发邮件通知、如钉钉告警)
 			if err.IsAlert() {
 			}
 
@@ -149,9 +146,10 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 				Desc:    err.Desc(),
 			}
 		} else {
-			httpCode = nethttp.StatusBadRequest
-			businessCode = code.UnknownError
-			businessMessage = code.Get().GetText(businessCode)
+			err = errcode.ErrorUnknownError
+			httpCode = err.HTTPCode()
+			businessCode = err.BusinessCode()
+			businessMessage = err.Message()
 			stackErr = ctx.Err()
 			response = global.ResponseErr{
 				TraceId: traceId,

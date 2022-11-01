@@ -1,9 +1,17 @@
 package errcode
 
-import "ult/pkg/code"
+import (
+	pkg_code "ult/pkg/code"
+	"ult/pkg/errors"
+)
 
-// RegisterTexts 注册业务状态提示码
-func RegisterTexts() {
-	code.Get().WithTexts(code.EnUS, enUSText)
-	code.Get().WithTexts(code.ZhCN, zhCNText)
+func NewError(code int) errors.BusinessError {
+	return errors.NewError(pkg_code.Get().GetHttpCode(code), code, pkg_code.Get().GetText(code))
+}
+
+// RegisterNewMerged 注册合并业务状态
+func RegisterNewMerged() {
+	pkg_code.Get().WithHttpCodes(httpCode)
+	pkg_code.Get().WithTexts(pkg_code.EnUS, enUSText)
+	pkg_code.Get().WithTexts(pkg_code.ZhCN, zhCNText)
 }

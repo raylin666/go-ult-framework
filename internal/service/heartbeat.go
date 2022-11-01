@@ -6,12 +6,12 @@ import (
 )
 
 type HeartbeatService struct {
-	logger   *logger.Logger
+	logger *logger.Logger
 }
 
 func NewHeartbeatService(logger *logger.Logger) *HeartbeatService {
 	return &HeartbeatService{
-		logger:   logger,
+		logger: logger,
 	}
 }
 

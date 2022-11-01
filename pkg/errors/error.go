@@ -1,7 +1,6 @@
 package errors
 
 import (
-	goerrors "errors"
 	"github.com/raylin666/go-utils/errors"
 )
 
@@ -20,10 +19,10 @@ type BusinessError interface {
 	Message() string
 	// Desc 获取错误说明
 	Desc() string
+	// Alert 开启告警通知
+	Alert() BusinessError
 	// WithDesc 设置错误说明
 	WithDesc(desc string) BusinessError
-	// WithAlert 设置告警通知
-	WithAlert() BusinessError
 	// IsAlert 是否开启告警通知
 	IsAlert() bool
 }
@@ -35,10 +34,6 @@ type businessError struct {
 	desc         string // 错误说明
 	stackError   error  // 含有堆栈信息的错误
 	isAlert      bool   // 是否告警通知
-}
-
-func NewOriginalError(text string) error {
-	return goerrors.New(text)
 }
 
 func NewError(httpCode, businessCode int, message string) BusinessError {
@@ -81,7 +76,7 @@ func (e *businessError) WithDesc(desc string) BusinessError {
 	return e
 }
 
-func (e *businessError) WithAlert() BusinessError {
+func (e *businessError) Alert() BusinessError {
 	e.isAlert = true
 	return e
 }
