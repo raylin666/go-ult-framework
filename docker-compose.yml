@@ -1,0 +1,18 @@
+version: '3'
+services:
+  ult:
+    build: .
+    container_name: ult
+    ports:
+      - "10001:10001"
+    networks:
+      - basic
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    restart: "always"
+networks:
+  basic:
+      name: "basic_net"

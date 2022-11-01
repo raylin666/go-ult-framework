@@ -6,7 +6,7 @@ GIT_VERSION=$(shell git describe --tags --always)
 .PHONY: init
 # 初始化安装脚本
 init:
-	cp .env.example.yml .env.yml
+	cp .env.yml.example .env.yml
 
 .PHONY: generate
 # 自动化生成编译前的类库代码
