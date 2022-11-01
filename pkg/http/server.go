@@ -14,6 +14,7 @@ import (
 	"ult/config"
 	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
 )
 
 var _ global.Server = (*HTTPServer)(nil)
@@ -25,10 +26,10 @@ type HTTPServer struct {
 	engine   *gin.Engine
 	config   *config.Config
 	logger   *logger.Logger
-	dataRepo global.DataRepo
+	dataRepo repositories.DataRepo
 }
 
-func NewServer(config *config.Config, log *logger.Logger, dataRepo global.DataRepo, srvOpts []http.ServerOption, opts ...Option) *HTTPServer {
+func NewServer(config *config.Config, log *logger.Logger, dataRepo repositories.DataRepo, srvOpts []http.ServerOption, opts ...Option) *HTTPServer {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	var srv = &HTTPServer{
@@ -70,7 +71,7 @@ func (srv *HTTPServer) Logger() *logger.Logger {
 	return srv.logger
 }
 
-func (srv *HTTPServer) DataRepo() global.DataRepo {
+func (srv *HTTPServer) DataRepo() repositories.DataRepo {
 	return srv.dataRepo
 }
 

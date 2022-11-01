@@ -13,8 +13,8 @@ import (
 	"sync"
 	"ult/internal/constant/errcode"
 	"ult/pkg/code"
-	pkg_context "ult/pkg/context"
 	"ult/pkg/errors"
+	"ult/pkg/global"
 )
 
 const (
@@ -300,9 +300,9 @@ func (c *context) URI() string {
 
 // RequestContext 获取请求的 Context (当client关闭后，会自动canceled)
 func (c *context) RequestContext() stdCtx.Context {
-	var reqContext = new(pkg_context.RequestContext)
+	var reqContext = new(global.RequestContext)
 	reqContext.WithTraceID(c.TraceID())
-	return pkg_context.NewRequestContext(c.ctx.Request.Context(), reqContext)
+	return global.NewRequestContext(c.ctx.Request.Context(), reqContext)
 }
 
 // ResponseWriter 获取 ResponseWriter

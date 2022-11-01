@@ -13,6 +13,7 @@ import (
 	"ult/pkg/global"
 	"ult/pkg/http"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
 )
 
 func newApp(
@@ -72,7 +73,7 @@ func main() {
 	}
 
 	// 初始化数据仓库
-	var repo = global.NewDataRepo(applogger, conf.DB, conf.Redis)
+	var repo = repositories.NewDataRepo(applogger, conf.DB, conf.Redis)
 
 	// 初始化应用服务
 	application, cleanup, err := initApp(conf, applogger, repo)

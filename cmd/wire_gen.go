@@ -12,12 +12,13 @@ import (
 	"ult/internal/server"
 	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
 )
 
 // Injectors from wire.go:
 
 // initApp init application.
-func initApp(conf *config.Config, log *logger.Logger, repo global.DataRepo) (*global.App, func(), error) {
+func initApp(conf *config.Config, log *logger.Logger, repo repositories.DataRepo) (*global.App, func(), error) {
 	httpRouter := router.NewHTTPRouter()
 	httpServer := server.NewHTTPServer(conf, log, repo, httpRouter)
 	app := newApp(conf, log, httpServer)

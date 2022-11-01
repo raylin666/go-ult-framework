@@ -6,16 +6,16 @@ import (
 	"strings"
 	"ult/config"
 	"ult/internal/router"
-	"ult/pkg/global"
 	pkg_http "ult/pkg/http"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
 )
 
 // NewHTTPServer 创建 HTTP 服务
 func NewHTTPServer(
 	config *config.Config,
 	logger *logger.Logger,
-	dataRepo global.DataRepo,
+	dataRepo repositories.DataRepo,
 	httpRouter router.HTTPRouter) *pkg_http.HTTPServer {
 	var addr = fmt.Sprintf("%s:%d", config.Server.Http.Host, config.Server.Http.Port)
 	var cors_domains []string
@@ -33,6 +33,7 @@ func NewHTTPServer(
 			http.WithServerNetwork(config.Server.Http.Network),
 			http.WithServerAddress(addr),
 		},
+		// pkg_http.EnableAlertNotify(email.NotifyHandler(config.Notify, logger)),
 		pkg_http.EnableCors(cors_domains),
 		pkg_http.EnablePProf())
 

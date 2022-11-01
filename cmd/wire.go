@@ -10,15 +10,16 @@ import (
 	"ult/config"
 	"ult/internal/router"
 	"ult/internal/server"
-	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
+	"ult/pkg/global"
 )
 
 // initApp init application.
 func initApp(
 	conf *config.Config,
 	log *logger.Logger,
-	repo global.DataRepo) (*global.App, func(), error) {
+	repo repositories.DataRepo) (*global.App, func(), error) {
 	panic(wire.Build(
 		server.ProviderSet,
 		router.ProviderSet,

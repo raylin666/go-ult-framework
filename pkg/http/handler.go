@@ -14,6 +14,7 @@ import (
 	"ult/pkg/code"
 	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/proposal"
 )
 
 const (
@@ -105,7 +106,19 @@ func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	appctx.WithAbortError(errcode.NewError(code.ServerError).WithStackError(goerror.New("got panic")))
 
 	// 设置告警提醒 (如发邮件通知、如钉钉告警)
-
+	if notifyHandler := srv.option.alertNotify; notifyHandler != nil {
+		notifyHandler(&proposal.AlertMessage{
+			ProjectName:  srv.config.App.Name,
+			Environment:  srv.config.Environment,
+			TraceID:      appctx.TraceID(),
+			HOST:         appctx.Host(),
+			URI:          appctx.URI(),
+			Method:       appctx.Method(),
+			ErrorMessage: err,
+			ErrorStack:   stack,
+			Timestamp:    time.Now(),
+		})
+	}
 }
 
 // handlerResponse 响应处理 (由 handlerRequest 内 defer 函数处理, 请勿单独调用)
@@ -137,26 +150,29 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 			stackErr = err.StackError()
 			// 设置告警提醒 (如发邮件通知、如钉钉告警)
 			if err.IsAlert() {
+				if notifyHandler := srv.option.alertNotify; notifyHandler != nil {
+					notifyHandler(&proposal.AlertMessage{
+						ProjectName:  srv.config.App.Name,
+						Environment:  srv.config.Environment,
+						TraceID:      traceId,
+						HOST:         appctx.Host(),
+						URI:          appctx.URI(),
+						Method:       appctx.Method(),
+						ErrorMessage: err,
+						ErrorStack:   fmt.Sprintf("%+v", stackErr),
+						Timestamp:    time.Now(),
+					})
+				}
 			}
 
-			response = global.ResponseErr{
-				TraceId: traceId,
-				Code:    businessCode,
-				Message: businessMessage,
-				Desc:    err.Desc(),
-			}
+			response = global.NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
 		} else {
 			err = errcode.ErrorUnknownError
 			httpCode = err.HTTPCode()
 			businessCode = err.BusinessCode()
 			businessMessage = err.Message()
 			stackErr = ctx.Err()
-			response = global.ResponseErr{
-				TraceId: traceId,
-				Code:    businessCode,
-				Message: businessMessage,
-				Desc:    err.Desc(),
-			}
+			response = global.NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
 		}
 
 		ctx.JSON(httpCode, response)
@@ -164,10 +180,7 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 		// 响应正确返回
 		httpCode = nethttp.StatusOK
 		businessMessage = "OK"
-		response = global.ResponseOK{
-			TraceId: traceId,
-			Data:    appctx.getPayload(),
-		}
+		response = global.NewSuccessResponse(traceId, appctx.getPayload())
 		ctx.JSON(httpCode, response)
 	}
 

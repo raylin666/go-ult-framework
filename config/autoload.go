@@ -32,6 +32,7 @@ type builder struct {
 	Redis       map[string]autoload.Redis `yaml:"redis"`
 	JWT         autoload.JWT              `yaml:"jwt"`
 	Datetime    autoload.Datetime         `yaml:"datetime"`
+	Notify      autoload.Notify           `yaml:"notify"`
 }
 
 func New() (*Config, error) {

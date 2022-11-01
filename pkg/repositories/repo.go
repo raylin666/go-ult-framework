@@ -1,4 +1,4 @@
-package global
+package repositories
 
 import (
 	"fmt"
@@ -10,8 +10,6 @@ import (
 )
 
 var _ DataRepo = (*dataRepo)(nil)
-var _ DbRepo = (*dbRepo)(nil)
-var _ RedisRepo = (*redisRepo)(nil)
 
 type DataRepo interface {
 	DB(name string) db.Db
@@ -23,22 +21,6 @@ type DataRepo interface {
 type dataRepo struct {
 	db    *dbRepo
 	redis *redisRepo
-}
-
-type DbRepo interface {
-	DB(name string) db.Db
-}
-
-type dbRepo struct {
-	resource map[string]db.Db
-}
-
-type RedisRepo interface {
-	Redis(name string) cache.Redis
-}
-
-type redisRepo struct {
-	resource map[string]cache.Redis
 }
 
 func NewDataRepo(logger *logger.Logger, db_config map[string]autoload.DB, redis_config map[string]autoload.Redis) DataRepo {
@@ -89,12 +71,4 @@ func (repo *dataRepo) Redis(name string) cache.Redis {
 
 func (repo *dataRepo) RedisRepo() RedisRepo {
 	return repo.redis
-}
-
-func (repo *dbRepo) DB(name string) db.Db {
-	return repo.resource[name]
-}
-
-func (repo *redisRepo) Redis(name string) cache.Redis {
-	return repo.resource[name]
 }

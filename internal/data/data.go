@@ -1,12 +1,12 @@
 package data
 
 import (
-	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
 )
 
 type DataRepo struct {}
 
-func NewDataRepo(logger *logger.Logger, repo global.DataRepo) *DataRepo {
+func NewDataRepo(logger *logger.Logger, repo repositories.DataRepo) *DataRepo {
 	return &DataRepo{}
 }

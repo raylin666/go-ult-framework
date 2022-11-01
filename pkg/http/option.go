@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/raylin666/go-utils/middleware"
 	"time"
+	"ult/pkg/proposal"
 )
 
 type Option func(opt *option)
@@ -14,6 +15,7 @@ type option struct {
 	pprof       bool
 	rate        bool
 	openBrowser string
+	alertNotify proposal.NotifyHandler
 	timeout     time.Duration
 	middlewares []middleware.HTTPHandler
 }
@@ -39,6 +41,12 @@ func EnableRate() Option {
 func EnableOpenBrowser(uri string) Option {
 	return func(opt *option) {
 		opt.openBrowser = uri
+	}
+}
+
+func EnableAlertNotify(handler proposal.NotifyHandler) Option {
+	return func(opt *option) {
+		opt.alertNotify = handler
 	}
 }
 

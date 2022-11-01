@@ -1,4 +1,4 @@
-package context
+package global
 
 import stdCtx "context"
 
