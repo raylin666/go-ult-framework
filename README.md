@@ -56,6 +56,12 @@
 > make run
 
 访问服务 `curl 127.0.0.1:10001/heartbeat` , 返回 `200` 状态码则表示成功。
+```shell
+{
+    "trace_id": "b2401c9e-1f6f-4183-952a-b539ddabbb71",
+    "data": "PONE"
+}
+```
 
 ### 编译执行文件 (需要有 .git 提交版本, 你也可以修改 `Makefile` 文件来取消这个限制)
 
