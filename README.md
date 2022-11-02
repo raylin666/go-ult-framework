@@ -55,6 +55,8 @@
 
 > make run
 
+也支持使用 `Dockerfile` 和 `docker-compose` 启动。
+
 访问服务 `curl 127.0.0.1:10001/heartbeat` , 返回 `200` 状态码则表示成功。
 ```shell
 {
@@ -272,8 +274,8 @@ if isErr := ctx.Validator(req); isErr {
 
 ### 异常处理/错误状态码
 
-1. 为了统一规范, 基础错误状态码放置在 `pkg/code/code.go` 文件中, HTTP 状态码设置在 `pkg/code/errhttp.go` 文件中 (未设置的状态码 响应时默认是 400), 状态码提示分为中英文 `zh-cn` 和 `en-us`。
-2. 业务状态码放置在 `internal/constant/errcode/errcode.go` 文件中, HTTP 状态码设置在 `internal/constant/errcode/errhttp.go` 文件中 (未设置的状态码 响应时默认是 400), 状态码提示也分为中英文 `zh-cn` 和 `en-us`。
+1. 为了统一规范, 基础错误状态码放置在 `pkg/code/code.go` 文件中, HTTP 状态码设置在 `pkg/code/errhttp.go` 文件中 (未设置的状态码 响应时默认是 `400`), 状态码提示分为中英文 `zh-cn` 和 `en-us`。
+2. 业务状态码放置在 `internal/constant/errcode/errcode.go` 文件中, HTTP 状态码设置在 `internal/constant/errcode/errhttp.go` 文件中 (未设置的状态码 响应时默认是 `400`), 状态码提示也分为中英文 `zh-cn` 和 `en-us`。
 3. 规范化的错误状态管理, 通过 `internal/constant/errcode/errors.go` 文件来定义错误, 抛出异常时只需要调用该变量即可实现, 避免了 普通错误码需要引用 `pkg` 包内的错误码, 而业务错误码则需要引用 `errcode` 包内的错误码, 导致调用极不统一的现象。
 4. 逻辑方法的异常情况统一为 `errors.BusinessError` 对象, 例如: 
 ```go
