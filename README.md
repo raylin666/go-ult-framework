@@ -53,9 +53,7 @@
 
 ### 启动服务
 
-> make run
-
-也支持使用 `Dockerfile` 和 `docker-compose` 启动。
+> make run 
 
 访问服务 `curl 127.0.0.1:10001/heartbeat` , 返回 `200` 状态码则表示成功。
 ```shell
@@ -64,6 +62,8 @@
     "data": "PONE"
 }
 ```
+
+也支持使用 `Dockerfile` 和 `docker-compose` 启动哦 ！
 
 ### 编译执行文件 (需要有 .git 提交版本, 你也可以修改 `Makefile` 文件来取消这个限制)
 
