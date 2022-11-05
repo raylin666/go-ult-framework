@@ -29,7 +29,6 @@ require (
 	github.com/gojek/heimdall/v7 v7.0.2 // indirect
 	github.com/gojek/valkyrie v0.0.0-20180215180059-6aee720afcdf // indirect
 	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
-	github.com/google/subcommands v1.0.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
