@@ -26,6 +26,7 @@ func NewHeartbeatHandler(logger *logger.Logger, service *service.HeartbeatServic
 
 func (h *HeartbeatHandler) PONE() http.HandlerFunc {
 	return func(ctx http.Context) {
-		ctx.WithPayload(h.service.PONE(ctx.RequestContext()))
+		var resp = h.service.PONE(ctx.RequestContext())
+		ctx.WithPayload(resp)
 	}
 }
