@@ -3,10 +3,17 @@ GOPATH:=$(shell go env GOPATH)
 GOVERSION:=$(shell go env GOVERSION)
 GIT_VERSION=$(shell git describe --tags --always)
 
+ifneq ($(wildcard .env.yml), .env.yml)
+	ENVFILE=$(shell cp .env.example.yml .env.yml)
+	ENVCREATE_SUCCESS_TIP='创建配置文件成功.'
+endif
+
 .PHONY: init
 # 初始化安装脚本
 init:
-	cp .env.yml.example .env.yml
+	$(ENVFILE)
+	@echo $(ENVCREATE_SUCCESS_TIP)
+	@echo '初始化操作完成!'
 
 .PHONY: generate
 # 自动化生成编译前的类库代码
