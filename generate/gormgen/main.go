@@ -31,7 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	rdb, err := db.NewDb(defined.DB_CONNECTION_DEFAULT_NAME, conf.DB[defined.DB_CONNECTION_DEFAULT_NAME], log)
+	defaultDB, err := db.NewDb(defined.DB_CONNECTION_DEFAULT_NAME, conf.DB[defined.DB_CONNECTION_DEFAULT_NAME], log)
 	if err != nil {
 		panic(err)
 	}
@@ -40,5 +40,5 @@ func main() {
 	var outPath = "../../internal/repositories/dbrepo/query"
 
 	// 执行生成默认数据库对应的模型文件
-	genDb.NewGeneratorDefaultDb(rdb, outPath)
+	genDb.NewGeneratorDefaultDb(defaultDB, outPath)
 }
