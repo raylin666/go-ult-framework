@@ -63,7 +63,7 @@
 }
 ```
 
-也支持采用 `Dockerfile` 和 `docker-compose` 启动哦 ！
+同时也支持采用 `Dockerfile` 和 `docker-compose` 启动哦 ！
 
 ### 编译执行文件 (需要有 .git 提交版本, 你也可以修改 `Makefile` 文件来取消这个限制)
 

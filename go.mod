@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
-	github.com/raylin666/go-utils v1.4.3
+	github.com/raylin666/go-utils v1.4.4
 	github.com/rs/cors/wrapper/gin v0.0.0-20221003140808-fcebdb403f4d
 	go.uber.org/zap v1.21.0
 	gorm.io/gen v0.3.18
