@@ -87,9 +87,9 @@
 
 ### 创建新模块
 
-> 以 `heartbeat` 为例: 
+> 以 `account` 为例: 
 1. 在 `internal/router`、`internal/api` 和 `internal/service` 模块分别复制 `heartbeat` 文件, 并依次重命名为新模块名称。
-2. 修改 `internal/router/router.go` 文件, 在结构体 `httpRouter.handle` 里添加新模块接口映射；然后在 `NewHTTPRouter` 里的注册处理器添加实例化；最后新增路由注册, 例如: `r.heartbeat(r.g.Group("/heartbeat"))` 。
+2. 修改 `internal/router/router.go` 文件, 在结构体 `httpRouter.handle` 里添加新模块接口映射；然后在 `NewHTTPRouter` 里的注册处理器添加实例化；最后新增路由注册, 例如: `r.account(r.g.Group("/account"))` 。
 3. 此时新模块就创建好了, 运行项目就可以访问对应的路由～
 
 ### 数据库模块
