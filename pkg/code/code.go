@@ -37,19 +37,20 @@ type code struct {
 const (
 	/* 系统相关 */
 	ServerError           = 100001
-	AuthorizationError    = 100002
-	ParamBindError        = 100003
-	RequestError          = 100004
-	ParamValidateError    = 100005
-	UnknownError          = 100006
-	DataNotExistError     = 100007
-	DataExistError        = 100008
-	RequestNotFoundError  = 100009
-	DataDeleteError       = 100010
-	ResourceNotExistError = 100011
-	DataSelectError       = 100012
-	DataCreateError       = 100013
-	DataUpdateError       = 100014
+	/* 应用相关 */
+	AuthorizationError    = 200001
+	ParamBindError        = 200002
+	RequestError          = 200003
+	ParamValidateError    = 200004
+	UnknownError          = 200005
+	DataNotExistError     = 200006
+	DataExistError        = 200007
+	RequestNotFoundError  = 200008
+	DataDeleteError       = 200009
+	ResourceNotExistError = 200010
+	DataSelectError       = 200011
+	DataCreateError       = 200012
+	DataUpdateError       = 200013
 )
 
 func New(local string) Code {
