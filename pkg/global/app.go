@@ -92,9 +92,9 @@ func (app *App) Run() error {
 		app.cancel = append(app.cancel, func() {
 			server.CancelBefore()
 			if err := server.Stop(ctx); err != nil {
-				app.logger.UseApp().Error(fmt.Sprintf("%s server shutdown err", srvType), zap.Error(err))
+				app.logger.UseApp(ctx).Error(fmt.Sprintf("%s server shutdown err", srvType), zap.Error(err))
 			} else {
-				app.logger.UseApp().Info(fmt.Sprintf("%s server is success close", srvType))
+				app.logger.UseApp(ctx).Info(fmt.Sprintf("%s server is success close", srvType))
 			}
 
 			server.CancelAfter()
@@ -105,7 +105,7 @@ func (app *App) Run() error {
 		// 服务启动
 		go func() {
 			if err := server.Start(ctx); err != nil {
-				app.logger.UseApp().Error(fmt.Sprintf("%s server startup err", srvType), zap.Error(err))
+				app.logger.UseApp(ctx).Error(fmt.Sprintf("%s server startup err", srvType), zap.Error(err))
 			}
 		}()
 

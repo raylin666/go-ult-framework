@@ -17,6 +17,7 @@ func NewHTTPServer(
 	logger *logger.Logger,
 	dataRepo repositories.DataRepo,
 	httpRouter router.HTTPRouter) *pkg_http.HTTPServer {
+	// var ctx = context.Background()
 	var addr = fmt.Sprintf("%s:%d", config.Server.Http.Host, config.Server.Http.Port)
 	var cors_domains []string
 	if config.Server.Http.Cors.Domains == "all" {
@@ -33,7 +34,7 @@ func NewHTTPServer(
 			http.WithServerNetwork(config.Server.Http.Network),
 			http.WithServerAddress(addr),
 		},
-		// pkg_http.EnableAlertNotify(email.NotifyHandler(config.Notify, logger)),
+		// pkg_http.EnableAlertNotify(email.NotifyHandler(ctx, config.Notify, logger)),
 		pkg_http.EnableCors(cors_domains),
 		pkg_http.EnablePProf())
 

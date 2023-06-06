@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"ult/internal/constant/defined"
 	"ult/internal/constant/errcode"
 	"ult/pkg/code"
 	"ult/pkg/errors"
@@ -18,13 +19,10 @@ import (
 )
 
 const (
-	headerXTraceIdName = "X-Trace-Id"
-
 	_BodyName_       = "_body_"
 	_PayloadName_    = "_payload_"
 	_AbortErrorName_ = "_abort_error_"
 	_ValidatorName_  = "_validator_"
-	_TraceIdName_    = "_trace_id_"
 )
 
 type HandlerFunc func(ctx Context)
@@ -163,17 +161,17 @@ func (c *context) Redirect(code int, location string) {
 
 // TraceID 获取链路追踪ID
 func (c *context) TraceID() string {
-	traceId, ok := c.ctx.Get(_TraceIdName_)
+	traceId, ok := c.ctx.Get(defined.TRACE_ID_NAME)
 	if ok {
 		return traceId.(string)
 	}
 
-	var headerTraceId = c.GetHeader(headerXTraceIdName)
+	var headerTraceId = c.GetHeader(defined.TRACE_ID_NAME)
 	if len(headerTraceId) <= 0 {
 		headerTraceId = uuid.New().String()
 	}
 
-	c.ctx.Set(_TraceIdName_, headerTraceId)
+	c.ctx.Set(defined.TRACE_ID_NAME, headerTraceId)
 	return headerTraceId
 }
 

@@ -106,7 +106,7 @@ func (srv *HTTPServer) CancelBefore() {}
 func (srv *HTTPServer) CancelAfter() {}
 
 func (srv *HTTPServer) Start(ctx stdCtx.Context) error {
-	srv.logger.UseApp().Info(fmt.Sprintf("Serving HTTP-Server on %s", srv.ServerAgreement().Target))
+	srv.logger.UseApp(ctx).Info(fmt.Sprintf("Serving HTTP-Server on %s", srv.ServerAgreement().Target))
 	return srv.server.Start(ctx)
 }
 

@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"context"
 	"github.com/raylin666/go-utils/logger"
 	"go.uber.org/zap"
 	"reflect"
 	"time"
+	"ult/internal/constant/defined"
 )
 
 const (
@@ -22,20 +24,19 @@ func NewJSONLogger(opts ...logger.Option) (*Logger, error) {
 	return &Logger{zaplogger}, err
 }
 
-func (log *Logger) UseApp() *zap.Logger {
-	return log.Logger.Named(LogApp)
+func (log *Logger) UseApp(ctx context.Context) *zap.Logger {
+	return log.Logger.Named(LogApp).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
 }
 
-func (log *Logger) UseSQL() *zap.Logger {
-	return log.Logger.Named(LogSQL)
+func (log *Logger) UseSQL(ctx context.Context) *zap.Logger {
+	return log.Logger.Named(LogSQL).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
 }
 
-func (log *Logger) UseRequest() *zap.Logger {
-	return log.Logger.Named(LogRequest)
+func (log *Logger) UseRequest(ctx context.Context) *zap.Logger {
+	return log.Logger.Named(LogRequest).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
 }
 
 type RequestLogFormat struct {
-	TraceId           string              `json:"trace_id"`
 	ClientIp          string              `json:"client_ip"`
 	Method            string              `json:"method"`
 	Path              string              `json:"path"`
@@ -54,10 +55,10 @@ type RequestLogFormat struct {
 }
 
 // RequestLog 打印请求日志
-func (log *Logger) RequestLog(rlf *RequestLogFormat, err error) {
+func (log *Logger) RequestLog(ctx context.Context, rlf *RequestLogFormat, err error) {
 	var types = reflect.TypeOf(rlf)
 	var values = reflect.ValueOf(rlf)
-	var zaplog = log.UseRequest()
+	var zaplog = log.UseRequest(ctx)
 	for i := 0; i < types.Elem().NumField(); i++ {
 		zaplog = zaplog.With(zap.Any(types.Elem().Field(i).Tag.Get("json"), values.Elem().Field(i).Interface()))
 	}
