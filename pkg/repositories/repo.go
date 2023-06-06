@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"fmt"
 	"go.uber.org/zap"
 	"ult/config/autoload"
@@ -24,18 +25,22 @@ type dataRepo struct {
 }
 
 func NewDataRepo(logger *logger.Logger, db_config map[string]autoload.DB, redis_config map[string]autoload.Redis) DataRepo {
-	var dbRepo = new(dbRepo)
-	var redisRepo = new(redisRepo)
-	var repo = new(dataRepo)
+	var (
+		ctx = context.Background()
+
+		dbRepo    = new(dbRepo)
+		redisRepo = new(redisRepo)
+		repo      = new(dataRepo)
+	)
 
 	// 初始化数据库
 	dbRepo.resource = make(map[string]db.Db, len(db_config))
 	for dbName, dbConfig := range db_config {
 		rdb, err := db.NewDb(dbName, dbConfig, logger)
 		if err != nil {
-			logger.UseApp().Error(fmt.Sprintf("init db.repo %s error", dbName), zap.Error(err))
+			logger.UseApp(ctx).Error(fmt.Sprintf("init db.repo %s error", dbName), zap.Error(err))
 		} else {
-			logger.UseApp().Info(fmt.Sprintf("init db.repo %s success", dbName))
+			logger.UseApp(ctx).Info(fmt.Sprintf("init db.repo %s success", dbName))
 			dbRepo.resource[dbName] = rdb
 		}
 	}
@@ -45,9 +50,9 @@ func NewDataRepo(logger *logger.Logger, db_config map[string]autoload.DB, redis_
 	for redisName, redisConfig := range redis_config {
 		redis, err := cache.NewRedis(redisName, redisConfig)
 		if err != nil {
-			logger.UseApp().Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
+			logger.UseApp(ctx).Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
 		} else {
-			logger.UseApp().Info(fmt.Sprintf("init redis.repo %s success", redisName))
+			logger.UseApp(ctx).Info(fmt.Sprintf("init redis.repo %s success", redisName))
 			redisRepo.resource[redisName] = redis
 		}
 	}

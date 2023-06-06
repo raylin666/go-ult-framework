@@ -95,7 +95,7 @@ func (srv *HTTPServer) handlerRequest(validator validator.Validator) gin.Handler
 func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	// 获取堆栈信息
 	var stack = string(debug.Stack())
-	srv.logger.UseApp().Error("got panic", zap.String("panic", fmt.Sprintf("%+v", err)), zap.String("stack", stack))
+	srv.logger.UseApp(ctx).Error("got panic", zap.String("panic", fmt.Sprintf("%+v", err)), zap.String("stack", stack))
 	// 获取核心上下文 Context
 	appctx := ctx.Value(_Core_ContextNameKey_).(Context)
 	if appctx == nil {
@@ -187,8 +187,7 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	costSeconds := time.Since(reqTime).Seconds()
 
 	// 请求日志打印
-	srv.logger.RequestLog(&logger.RequestLogFormat{
-		TraceId:           traceId,
+	srv.logger.RequestLog(ctx, &logger.RequestLogFormat{
 		ClientIp:          ctx.ClientIP(),
 		Method:            appctx.Method(),
 		Path:              appctx.URI(),

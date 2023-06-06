@@ -66,19 +66,19 @@ func (l *Logger) LogMode(level gorm_logger.LogLevel) gorm_logger.Interface {
 
 func (l *Logger) Info(ctx context.Context, str string, args ...interface{}) {
 	if l.logLevel >= gorm_logger.Info {
-		l.l.UseSQL().Sugar().Infof(str, args...)
+		l.l.UseSQL(ctx).Sugar().Infof(str, args...)
 	}
 }
 
 func (l *Logger) Warn(ctx context.Context, str string, args ...interface{}) {
 	if l.logLevel >= gorm_logger.Warn {
-		l.l.UseSQL().Sugar().Warnf(str, args...)
+		l.l.UseSQL(ctx).Sugar().Warnf(str, args...)
 	}
 }
 
 func (l *Logger) Error(ctx context.Context, str string, args ...interface{}) {
 	if l.logLevel >= gorm_logger.Error {
-		l.l.UseSQL().Sugar().Errorf(str, args...)
+		l.l.UseSQL(ctx).Sugar().Errorf(str, args...)
 	}
 }
 
@@ -89,8 +89,8 @@ func (l *Logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 
 	var (
 		traceId string
-		sql  string
-		rows int64
+		sql     string
+		rows    int64
 	)
 
 	// 请求链路追踪 TraceID
@@ -108,12 +108,12 @@ func (l *Logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 	switch {
 	case err != nil && l.logLevel >= gorm_logger.Error && (!l.ignoreRecordNotFoundError || !errors.Is(err, gorm.ErrRecordNotFound)):
 		sql, rows = fc()
-		l.l.UseSQL().Error("ERROR SQL", zap.Error(err), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
+		l.l.UseSQL(ctx).Error("ERROR SQL", zap.Error(err), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	case l.slowThreshold != 0 && elapsed > l.slowThreshold && l.logLevel >= gorm_logger.Warn:
 		sql, rows = fc()
-		l.l.UseSQL().Warn(fmt.Sprintf("SLOW SQL >= %v", l.slowThreshold), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
+		l.l.UseSQL(ctx).Warn(fmt.Sprintf("SLOW SQL >= %v", l.slowThreshold), fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	case l.logLevel >= gorm_logger.Info:
 		sql, rows = fc()
-		l.l.UseSQL().Info("INFO SQL", fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
+		l.l.UseSQL(ctx).Info("INFO SQL", fileStr, elapsedStr, rowsStr(rows), sqlStr(sql), traceIdStr(traceId))
 	}
 }

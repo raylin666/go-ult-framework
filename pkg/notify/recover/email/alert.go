@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"github.com/raylin666/go-utils/mail"
 	"go.uber.org/zap"
 	"strings"
@@ -10,11 +11,11 @@ import (
 )
 
 // NotifyHandler 告警通知
-func NotifyHandler(config autoload.Notify, logger *logger.Logger) func(msg *proposal.AlertMessage) {
+func NotifyHandler(ctx context.Context, config autoload.Notify, logger *logger.Logger) func(msg *proposal.AlertMessage) {
 	return func(msg *proposal.AlertMessage) {
 		go func() {
 			if config.Recover.Email.Host == "" || config.Recover.Email.Port == 0 || config.Recover.Email.User == "" || config.Recover.Email.Pass == "" || config.Recover.Email.To == "" {
-				logger.UseApp().Error("email notify config error")
+				logger.UseApp(ctx).Error("email notify config error")
 				return
 			}
 
@@ -28,7 +29,7 @@ func NotifyHandler(config autoload.Notify, logger *logger.Logger) func(msg *prop
 				msg.Timestamp,
 				msg.ErrorStack)
 			if err != nil {
-				logger.UseApp().Error("email notify template error", zap.Error(err))
+				logger.UseApp(ctx).Error("email notify template error", zap.Error(err))
 				return
 			}
 
@@ -39,7 +40,7 @@ func NotifyHandler(config autoload.Notify, logger *logger.Logger) func(msg *prop
 				mail.WithMailPass(config.Recover.Email.Pass))
 
 			if err := m.SendTextHtml(subject, body, strings.Split(config.Recover.Email.To, ",")); err != nil {
-				logger.UseApp().Error("发送告警通知邮件失败", zap.Error(err))
+				logger.UseApp(ctx).Error("发送告警通知邮件失败", zap.Error(err))
 			}
 
 			return
