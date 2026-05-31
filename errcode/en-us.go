@@ -1,7 +1,6 @@
-package code
+package errcode
 
 var enUSText = map[int]string{
-	/* 系统相关 */
 	ServerError:           "Internal server error",
 	AuthorizationError:    "Authorization error",
 	ParamBindError:        "Parameter error",

@@ -2,13 +2,13 @@ package config
 
 import (
 	"fmt"
-	ut "github.com/raylin666/go-utils"
-	"github.com/raylin666/go-utils/server/system"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"ult/config/autoload"
+
+	"github.com/raylin666/go-utils/v2/config"
 )
 
 const (
@@ -17,7 +17,6 @@ const (
 
 type Config struct {
 	*builder
-	Env         system.Environment
 	ProjectPath string
 }
 
@@ -39,13 +38,10 @@ func New() (*Config, error) {
 	var conf = new(Config)
 	conf.ProjectPath = getProjectPath()
 	var envFile = fmt.Sprintf("%s/%s", conf.ProjectPath, envFileName)
-	err := ut.LoadYml(envFile, &conf.builder)
+	err := config.LoadYaml(envFile, &conf.builder)
 	if err != nil {
 		return nil, err
 	}
-
-	conf.Env = system.NewEnvironment(conf.Environment)
-	conf.Environment = conf.Env.Value()
 	return conf, nil
 }
 

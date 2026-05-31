@@ -2,12 +2,13 @@ package email
 
 import (
 	"context"
-	"github.com/raylin666/go-utils/mail"
-	"go.uber.org/zap"
 	"strings"
 	"ult/config/autoload"
 	"ult/pkg/logger"
 	"ult/pkg/proposal"
+
+	"github.com/raylin666/go-utils/v2/mail"
+	"go.uber.org/zap"
 )
 
 // NotifyHandler 告警通知
@@ -33,7 +34,7 @@ func NotifyHandler(ctx context.Context, config autoload.Notify, logger *logger.L
 				return
 			}
 
-			var m = mail.New(
+			m, err := mail.New(
 				mail.WithMailHost(config.Recover.Email.Host),
 				mail.WithMailPort(config.Recover.Email.Port),
 				mail.WithMailUser(config.Recover.Email.User),
@@ -42,8 +43,6 @@ func NotifyHandler(ctx context.Context, config autoload.Notify, logger *logger.L
 			if err := m.SendTextHtml(subject, body, strings.Split(config.Recover.Email.To, ",")); err != nil {
 				logger.UseApp(ctx).Error("发送告警通知邮件失败", zap.Error(err))
 			}
-
-			return
 		}()
 	}
 }

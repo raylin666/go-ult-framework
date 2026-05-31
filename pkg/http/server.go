@@ -3,21 +3,21 @@ package http
 import (
 	stdCtx "context"
 	"fmt"
-	"github.com/gin-contrib/pprof"
-	"github.com/gin-gonic/gin"
-	"github.com/raylin666/go-utils/http"
-	"github.com/raylin666/go-utils/middleware"
-	"github.com/raylin666/go-utils/server"
-	"github.com/raylin666/go-utils/server/system"
 	nethttp "net/http"
 	"time"
 	"ult/config"
-	"ult/pkg/global"
+	"ult/pkg/app"
 	"ult/pkg/logger"
-	"ult/pkg/repositories"
+
+	"github.com/gin-contrib/pprof"
+	"github.com/gin-gonic/gin"
+	"github.com/raylin666/go-utils/v2/http"
+	"github.com/raylin666/go-utils/v2/middleware"
+	utilsserver "github.com/raylin666/go-utils/v2/server"
+	"github.com/raylin666/go-utils/v2/server/system"
 )
 
-var _ global.Server = (*HTTPServer)(nil)
+var _ app.Server = (*HTTPServer)(nil)
 
 type HTTPServer struct {
 	*option
@@ -26,10 +26,9 @@ type HTTPServer struct {
 	engine   *gin.Engine
 	config   *config.Config
 	logger   *logger.Logger
-	dataRepo repositories.DataRepo
 }
 
-func NewServer(config *config.Config, log *logger.Logger, dataRepo repositories.DataRepo, srvOpts []http.ServerOption, opts ...Option) *HTTPServer {
+func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerOption, opts ...Option) *HTTPServer {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	var srv = &HTTPServer{
@@ -37,7 +36,6 @@ func NewServer(config *config.Config, log *logger.Logger, dataRepo repositories.
 		engine:   engine,
 		config:   config,
 		logger:   log,
-		dataRepo: dataRepo,
 	}
 
 	srv.option = &option{timeout: 5 * time.Second}
@@ -54,7 +52,7 @@ func NewServer(config *config.Config, log *logger.Logger, dataRepo repositories.
 	}
 
 	// pprof 性能分析, register pprof to gin. 访问路径: /debug/pprof
-	if srv.option.pprof && !srv.config.Env.IsProd() {
+	if srv.option.pprof && !system.NewEnvironment(srv.config.Environment).IsProd() {
 		pprof.Register(srv.engine)
 	}
 
@@ -71,10 +69,6 @@ func (srv *HTTPServer) Logger() *logger.Logger {
 	return srv.logger
 }
 
-func (srv *HTTPServer) DataRepo() repositories.DataRepo {
-	return srv.dataRepo
-}
-
 // CreateRouterGroup 创建路由组
 func (srv *HTTPServer) CreateRouterGroup() RouterGroup {
 	return NewRouter(&srv.engine.RouterGroup)
@@ -85,8 +79,8 @@ func (srv *HTTPServer) ServeHTTP(writer nethttp.ResponseWriter, request *nethttp
 }
 
 // ServerAgreement 获取服务协议
-func (srv *HTTPServer) ServerAgreement() *global.ServerAgreement {
-	var agreement = new(global.ServerAgreement)
+func (srv *HTTPServer) ServerAgreement() *app.ServerAgreement {
+	var agreement = new(app.ServerAgreement)
 	agreement.Network = srv.config.Server.Http.Network
 	agreement.Addr = fmt.Sprintf("%s:%d", srv.config.Server.Http.Host, srv.config.Server.Http.Port)
 	agreement.Target = fmt.Sprintf("%s://%s", agreement.Network, agreement.Addr)
@@ -94,7 +88,7 @@ func (srv *HTTPServer) ServerAgreement() *global.ServerAgreement {
 }
 
 func (srv *HTTPServer) ServerType() string {
-	return fmt.Sprintf("%s [%s]", server.HTTPServerType, srv.ServerAgreement().Addr)
+	return fmt.Sprintf("%s [%s]", utilsserver.HTTPServerType, srv.ServerAgreement().Addr)
 }
 
 func (srv *HTTPServer) StartBefore() {}

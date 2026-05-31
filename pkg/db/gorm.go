@@ -3,12 +3,13 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/raylin666/go-utils/db/gorm"
-	gorm_db "gorm.io/gorm"
-	gorm_logger "gorm.io/gorm/logger"
 	"time"
 	"ult/config/autoload"
 	"ult/pkg/logger"
+
+	"github.com/raylin666/go-utils/v2/db/gorm"
+	gorm_db "gorm.io/gorm"
+	gorm_logger "gorm.io/gorm/logger"
 )
 
 var _ Db = (*db)(nil)

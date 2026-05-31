@@ -202,7 +202,7 @@ func NewAccountRepo(logger *logger.Logger, repo global.DataRepo) service.Account
 }
 
 func (data *accountRepo) ID(ctx context.Context, username string) int {
-	var q = dbrepo.NewDefaultDbQuery(data.repo.DB(defined.DB_CONNECTION_DEFAULT_NAME))
+	var q = dbrepo.NewDefaultDbQuery(data.repo.DB(defined.DbConnectionDefaultName))
 	res, err := q.Account.WithContext(ctx).FindByUserName(username)
 	if err != nil {
 		return 0

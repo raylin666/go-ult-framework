@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go.uber.org/zap"
-	"ult/config/autoload"
+	"ult/config"
 	"ult/pkg/cache"
 	"ult/pkg/db"
 	"ult/pkg/logger"
@@ -24,41 +24,60 @@ type dataRepo struct {
 	redis *redisRepo
 }
 
-func NewDataRepo(logger *logger.Logger, db_config map[string]autoload.DB, redis_config map[string]autoload.Redis) DataRepo {
+func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 	var (
 		ctx = context.Background()
 
 		dbRepo    = new(dbRepo)
 		redisRepo = new(redisRepo)
 		repo      = new(dataRepo)
+
+		dbMap    = conf.DB
+		redisMap = conf.Redis
 	)
 
 	// 初始化数据库
-	dbRepo.resource = make(map[string]db.Db, len(db_config))
-	for dbName, dbConfig := range db_config {
-		rdb, err := db.NewDb(dbName, dbConfig, logger)
-		if err != nil {
-			logger.UseApp(ctx).Error(fmt.Sprintf("init db.repo %s error", dbName), zap.Error(err))
-		} else {
-			logger.UseApp(ctx).Info(fmt.Sprintf("init db.repo %s success", dbName))
-			dbRepo.resource[dbName] = rdb
+	dbMap[DbConnectionDefaultName] = conf.DB["default"]
+
+	lenDatabase := len(dbMap)
+	if lenDatabase > 0 {
+		dbRepo.resource = make(map[string]db.Db, lenDatabase)
+		for dbName, dbConfig := range dbMap {
+			rdb, err := db.NewDb(dbName, dbConfig, logger)
+			if err != nil {
+				logger.UseApp(ctx).Error(fmt.Sprintf("init db.repo %s error", dbName), zap.Error(err))
+			} else {
+				logger.UseApp(ctx).Info(fmt.Sprintf("init db.repo %s successfully", dbName))
+				dbRepo.resource[dbName] = rdb
+			}
 		}
+
+		repo.db = dbRepo
+	} else {
+		logger.UseApp(ctx).Warn("Currently not db.repo connected.")
 	}
 
 	// 初始化 Redis
-	redisRepo.resource = make(map[string]cache.Redis, len(redis_config))
-	for redisName, redisConfig := range redis_config {
-		redis, err := cache.NewRedis(redisName, redisConfig)
-		if err != nil {
-			logger.UseApp(ctx).Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
-		} else {
-			logger.UseApp(ctx).Info(fmt.Sprintf("init redis.repo %s success", redisName))
-			redisRepo.resource[redisName] = redis
+	redisMap[RedisConnectionDefaultName] = conf.Redis["default"]
+
+	lenRedis := len(redisMap)
+	if lenRedis > 0 {
+		redisRepo.resource = make(map[string]cache.Redis, lenRedis)
+		for redisName, redisConfig := range redisMap {
+			redis, err := cache.NewRedis(redisName, redisConfig)
+			if err != nil {
+				logger.UseApp(ctx).Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
+			} else {
+				logger.UseApp(ctx).Info(fmt.Sprintf("init redis.repo %s successfully", redisName))
+				redisRepo.resource[redisName] = redis
+			}
 		}
+
+		repo.redis = redisRepo
+	} else {
+		logger.UseApp(ctx).Warn("Currently not redis.repo connected.")
 	}
 
-	repo.db = dbRepo
-	repo.redis = redisRepo
 	return repo
 }
 

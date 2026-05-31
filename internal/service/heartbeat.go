@@ -2,16 +2,20 @@ package service
 
 import (
 	"context"
-	"ult/pkg/logger"
+
+	"ult/internal/app"
+	"ult/internal/data/repo"
 )
 
 type HeartbeatService struct {
-	logger *logger.Logger
+	testRepo repo.TestRepo
+	tools    *app.Tools
 }
 
-func NewHeartbeatService(logger *logger.Logger) *HeartbeatService {
+func NewHeartbeatService(testRepo repo.TestRepo, tools *app.Tools) *HeartbeatService {
 	return &HeartbeatService{
-		logger: logger,
+		testRepo: testRepo,
+		tools:    tools,
 	}
 }
 

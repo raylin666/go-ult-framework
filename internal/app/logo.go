@@ -36,7 +36,7 @@ GO 版本及路径: %s (%s)
 		config.App.Name,
 		config.App.ID,
 		config.App.Version,
-		config.Env.Value(),
+		config.Environment,
 	)
 
 	color.HiGreen(contents)

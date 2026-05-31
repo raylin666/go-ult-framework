@@ -2,11 +2,12 @@ package logger
 
 import (
 	"context"
-	"github.com/raylin666/go-utils/logger"
-	"go.uber.org/zap"
 	"reflect"
 	"time"
-	"ult/internal/constant/defined"
+	"ult/pkg/types"
+
+	"github.com/raylin666/go-utils/v2/logger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -20,20 +21,20 @@ type Logger struct {
 }
 
 func NewJSONLogger(opts ...logger.Option) (*Logger, error) {
-	zaplogger, err := logger.NewJSONLogger(opts...)
-	return &Logger{zaplogger}, err
+	zapLogger, err := logger.NewJSONLogger(opts...)
+	return &Logger{zapLogger.Logger}, err
 }
 
 func (log *Logger) UseApp(ctx context.Context) *zap.Logger {
-	return log.Logger.Named(LogApp).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
+	return log.Logger.Named(LogApp).With(zap.Any("trace_id", ctx.Value(types.TraceIdName)))
 }
 
 func (log *Logger) UseSQL(ctx context.Context) *zap.Logger {
-	return log.Logger.Named(LogSQL).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
+	return log.Logger.Named(LogSQL).With(zap.Any("trace_id", ctx.Value(types.TraceIdName)))
 }
 
 func (log *Logger) UseRequest(ctx context.Context) *zap.Logger {
-	return log.Logger.Named(LogRequest).With(zap.Any("trace_id", ctx.Value(defined.TRACE_ID_NAME)))
+	return log.Logger.Named(LogRequest).With(zap.Any("trace_id", ctx.Value(types.TraceIdName)))
 }
 
 type RequestLogFormat struct {
@@ -58,10 +59,10 @@ type RequestLogFormat struct {
 func (log *Logger) RequestLog(ctx context.Context, rlf *RequestLogFormat, err error) {
 	var types = reflect.TypeOf(rlf)
 	var values = reflect.ValueOf(rlf)
-	var zaplog = log.UseRequest(ctx)
+	var zapLog = log.UseRequest(ctx)
 	for i := 0; i < types.Elem().NumField(); i++ {
-		zaplog = zaplog.With(zap.Any(types.Elem().Field(i).Tag.Get("json"), values.Elem().Field(i).Interface()))
+		zapLog = zapLog.With(zap.Any(types.Elem().Field(i).Tag.Get("json"), values.Elem().Field(i).Interface()))
 	}
 
-	zaplog.With(zap.Error(err)).Info("REQUEST LOG")
+	zapLog.With(zap.Error(err)).Info("请求日志")
 }

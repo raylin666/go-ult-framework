@@ -1,9 +1,10 @@
 package http
 
 import (
-	"github.com/raylin666/go-utils/middleware"
 	"time"
 	"ult/pkg/proposal"
+
+	"github.com/raylin666/go-utils/v2/middleware"
 )
 
 type Option func(opt *option)

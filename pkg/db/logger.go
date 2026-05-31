@@ -9,8 +9,8 @@ import (
 	gorm_logger "gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 	"time"
-	"ult/pkg/global"
 	"ult/pkg/logger"
+	"ult/pkg/types"
 )
 
 var _ gorm_logger.Interface = (*Logger)(nil)
@@ -94,7 +94,7 @@ func (l *Logger) Trace(ctx context.Context, begin time.Time, fc func() (string, 
 	)
 
 	// 请求链路追踪 TraceID
-	reqCtx, ok := global.FromRequestContext(ctx)
+	reqCtx, ok := types.FromRequestContext(ctx)
 	if ok {
 		traceId = reqCtx.TraceID()
 	}

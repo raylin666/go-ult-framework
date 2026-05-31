@@ -70,7 +70,6 @@ func (r *Router) HEAD(relativePath string, handlers ...HandlerFunc) {
 func wrapHandlers(handlers ...HandlerFunc) []gin.HandlerFunc {
 	funcs := make([]gin.HandlerFunc, len(handlers))
 	for i, handler := range handlers {
-		handler := handler
 		funcs[i] = func(c *gin.Context) {
 			ctx := newContext(c)
 			defer recoveryContext(ctx)

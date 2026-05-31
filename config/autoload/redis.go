@@ -19,5 +19,4 @@ type Redis struct {
 	MaxConnAge         int64  `yaml:"max_conn_age"`
 	PoolTimeout        int64  `yaml:"pool_timeout"`
 	IdleTimeout        int64  `yaml:"idle_timeout"`
-	IdleCheckFrequency int64  `yaml:"idle_check_frequency"`
 }

@@ -6,22 +6,26 @@
 package main
 
 import (
-	"github.com/google/wire"
 	"ult/config"
+	"ult/internal/api"
+	"ult/internal/app"
+	"ult/internal/data"
+	"ult/internal/data/repo"
 	"ult/internal/router"
 	"ult/internal/server"
-	"ult/pkg/logger"
-	"ult/pkg/repositories"
-	"ult/pkg/global"
+	"ult/internal/service"
+	pkgapp "ult/pkg/app"
+
+	"github.com/google/wire"
 )
 
-// initApp init application.
-func initApp(
-	conf *config.Config,
-	log *logger.Logger,
-	repo repositories.DataRepo) (*global.App, func(), error) {
+func initApp(conf *config.Config, tools *app.Tools) (*pkgapp.App, func(), error) {
 	panic(wire.Build(
-		server.ProviderSet,
+		data.ProviderSet,
+		repo.ProviderSet,
+		service.ProviderSet,
+		api.ProviderSet,
 		router.ProviderSet,
+		server.ProviderSet,
 		newApp))
 }

@@ -1,39 +1,30 @@
-package errors
+package errcode
 
 import (
-	"github.com/raylin666/go-utils/errors"
+	"github.com/raylin666/go-utils/v2/errors"
 )
 
 var _ BusinessError = (*businessError)(nil)
 
 type BusinessError interface {
-	// WithStackError 设置堆栈错误信息
 	WithStackError(err error) BusinessError
-	// StackError 获取带堆栈的错误信息
 	StackError() error
-	// BusinessCode 获取业务码
 	BusinessCode() int
-	// HTTPCode 获取 HTTP 状态码
 	HTTPCode() int
-	// Message 获取错误描述
 	Message() string
-	// Desc 获取错误说明
 	Desc() string
-	// Alert 开启告警通知
 	Alert() BusinessError
-	// WithDesc 设置错误说明
 	WithDesc(desc string) BusinessError
-	// IsAlert 是否开启告警通知
 	IsAlert() bool
 }
 
 type businessError struct {
-	httpCode     int    // HTTP 状态码
-	businessCode int    // 业务码
-	message      string // 错误描述
-	desc         string // 错误说明
-	stackError   error  // 含有堆栈信息的错误
-	isAlert      bool   // 是否告警通知
+	httpCode     int
+	businessCode int
+	message      string
+	desc         string
+	stackError   error
+	isAlert      bool
 }
 
 func NewError(httpCode, businessCode int, message string) BusinessError {

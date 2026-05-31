@@ -1,12 +1,14 @@
-package global
+package app
 
 import (
 	stdCtx "context"
 	"fmt"
-	"github.com/raylin666/go-utils/server/system"
-	"go.uber.org/zap"
 	"ult/config"
 	"ult/pkg/logger"
+	"ult/pkg/types"
+
+	"github.com/raylin666/go-utils/v2/server/system"
+	"go.uber.org/zap"
 )
 
 var _ AppInterface = (*App)(nil)
@@ -88,7 +90,6 @@ func (app *App) Run() error {
 	ctx := NewAppContext(app.context, app)
 	for _, server := range app.servers {
 		srvType := server.ServerType()
-		// 注册服务关闭事件
 		app.cancel = append(app.cancel, func() {
 			server.CancelBefore()
 			if err := server.Stop(ctx); err != nil {
@@ -102,7 +103,6 @@ func (app *App) Run() error {
 
 		server.StartBefore()
 
-		// 服务启动
 		go func() {
 			if err := server.Start(ctx); err != nil {
 				app.logger.UseApp(ctx).Error(fmt.Sprintf("%s server startup err", srvType), zap.Error(err))
@@ -112,20 +112,24 @@ func (app *App) Run() error {
 		server.StartAfter()
 	}
 
-	// 处理服务关闭事件
 	app.shutdown.Close(app.cancel...)
 	return nil
 }
 
 type appKey struct{}
 
-// NewAppContext returns a new Context that carries value.
 func NewAppContext(ctx stdCtx.Context, s AppInterface) stdCtx.Context {
 	return stdCtx.WithValue(ctx, appKey{}, s)
 }
 
-// FromAppContext returns the Transport value stored in ctx, if any.
 func FromAppContext(ctx stdCtx.Context) (s AppInterface, ok bool) {
 	s, ok = ctx.Value(appKey{}).(AppInterface)
 	return
+}
+
+func NewAppContextWithTraceId(ctx stdCtx.Context, app AppInterface, traceId string) stdCtx.Context {
+	ctx = NewAppContext(ctx, app)
+	var reqContext = new(types.RequestContext)
+	reqContext.WithTraceID(traceId)
+	return types.NewRequestContext(ctx, reqContext)
 }

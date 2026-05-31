@@ -3,19 +3,17 @@ package http
 import (
 	"bytes"
 	stdCtx "context"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/google/uuid"
-	"github.com/raylin666/go-utils/validator"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync"
-	"ult/internal/constant/defined"
-	"ult/internal/constant/errcode"
-	"ult/pkg/code"
-	"ult/pkg/errors"
-	"ult/pkg/global"
+	"ult/errcode"
+	"ult/pkg/types"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/google/uuid"
+	"github.com/raylin666/go-utils/v2/validator"
 )
 
 const (
@@ -67,8 +65,8 @@ type Context interface {
 	WithValidator(v validator.Validator)
 
 	// WithAbortError 错误返回
-	WithAbortError(err errors.BusinessError)
-	getAbortError() errors.BusinessError
+	WithAbortError(err errcode.BusinessError)
+	getAbortError() errcode.BusinessError
 
 	// WithPayload 正确返回
 	WithPayload(payload interface{})
@@ -161,24 +159,24 @@ func (c *context) Redirect(code int, location string) {
 
 // TraceID 获取链路追踪ID
 func (c *context) TraceID() string {
-	traceId, ok := c.ctx.Get(defined.TRACE_ID_NAME)
+	traceId, ok := c.ctx.Get(types.TraceIdName)
 	if ok {
 		return traceId.(string)
 	}
 
-	var headerTraceId = c.GetHeader(defined.TRACE_ID_NAME)
+	var headerTraceId = c.GetHeader(types.TraceIdName)
 	if len(headerTraceId) <= 0 {
 		headerTraceId = uuid.New().String()
 	}
 
-	c.ctx.Set(defined.TRACE_ID_NAME, headerTraceId)
+	c.ctx.Set(types.TraceIdName, headerTraceId)
 	return headerTraceId
 }
 
 func (c *context) Validator(req interface{}) (isErr bool) {
 	// 参数数据绑定
 	if err := c.ShouldBindForm(req); err != nil {
-		c.WithAbortError(errcode.NewError(code.ParamValidateError).WithStackError(err))
+		c.WithAbortError(errcode.New(errcode.ParamValidateError).WithStackError(err))
 		return true
 	}
 
@@ -188,8 +186,8 @@ func (c *context) Validator(req interface{}) (isErr bool) {
 		return true
 	}
 
-	if errStr := validate.(validator.Validator).Validate(req); errStr != "" {
-		c.WithAbortError(errcode.NewError(code.ParamValidateError).WithDesc(errStr))
+	if errStr := validate.(validator.Validator).Validate(req); errStr != nil {
+		c.WithAbortError(errcode.New(errcode.ParamValidateError).WithDesc(errStr.Error()))
 		return true
 	}
 
@@ -200,7 +198,7 @@ func (c *context) WithValidator(v validator.Validator) {
 	c.ctx.Set(_ValidatorName_, v)
 }
 
-func (c *context) WithAbortError(err errors.BusinessError) {
+func (c *context) WithAbortError(err errcode.BusinessError) {
 	if err != nil {
 		httpCode := err.HTTPCode()
 		if httpCode == 0 {
@@ -212,9 +210,9 @@ func (c *context) WithAbortError(err errors.BusinessError) {
 	}
 }
 
-func (c *context) getAbortError() errors.BusinessError {
+func (c *context) getAbortError() errcode.BusinessError {
 	err, _ := c.ctx.Get(_AbortErrorName_)
-	return err.(errors.BusinessError)
+	return err.(errcode.BusinessError)
 }
 
 func (c *context) WithPayload(payload interface{}) {
@@ -298,9 +296,9 @@ func (c *context) URI() string {
 
 // RequestContext 获取请求的 Context (当client关闭后，会自动canceled)
 func (c *context) RequestContext() stdCtx.Context {
-	var reqContext = new(global.RequestContext)
+	var reqContext = new(types.RequestContext)
 	reqContext.WithTraceID(c.TraceID())
-	return global.NewRequestContext(c.ctx.Request.Context(), reqContext)
+	return types.NewRequestContext(c.ctx.Request.Context(), reqContext)
 }
 
 // ResponseWriter 获取 ResponseWriter

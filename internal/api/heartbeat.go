@@ -1,9 +1,9 @@
 package api
 
 import (
+	"ult/internal/app"
 	"ult/internal/service"
 	"ult/pkg/http"
-	"ult/pkg/logger"
 )
 
 var _ HeartbeatInterface = (*HeartbeatHandler)(nil)
@@ -13,14 +13,14 @@ type HeartbeatInterface interface {
 }
 
 type HeartbeatHandler struct {
-	logger  *logger.Logger
 	service *service.HeartbeatService
+	tools   *app.Tools
 }
 
-func NewHeartbeatHandler(logger *logger.Logger, service *service.HeartbeatService) HeartbeatInterface {
+func NewHeartbeatHandler(service *service.HeartbeatService, tools *app.Tools) HeartbeatInterface {
 	return &HeartbeatHandler{
-		logger:  logger,
 		service: service,
+		tools:   tools,
 	}
 }
 

@@ -2,11 +2,11 @@ package cache
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	utils_redis "github.com/raylin666/go-utils/cache/redis"
 	"time"
 	"ult/config/autoload"
+
+	utils_redis "github.com/raylin666/go-utils/v2/cache/redis"
 )
 
 var _ Redis = (*redis)(nil)
@@ -29,10 +29,9 @@ func NewRedis(name string, config autoload.Redis) (Redis, error) {
 	opts.Password = config.Password
 	opts.DB = config.DB
 	opts.DialTimeout = time.Duration(config.DialTimeout)
-	opts.IdleTimeout = time.Duration(config.IdleTimeout)
-	opts.MaxConnAge = time.Duration(config.MaxConnAge)
+	opts.ConnMaxIdleTime = time.Duration(config.IdleTimeout)
+	opts.ConnMaxLifetime = time.Duration(config.MaxConnAge)
 	opts.MaxRetries = config.MaxRetries
-	opts.IdleCheckFrequency = time.Duration(config.IdleCheckFrequency)
 	opts.MaxRetryBackoff = time.Duration(config.MinRetryBackoff)
 	opts.MinRetryBackoff = time.Duration(config.MinRetryBackoff)
 	opts.MinIdleConns = config.MinIdleConns
@@ -44,7 +43,7 @@ func NewRedis(name string, config autoload.Redis) (Redis, error) {
 
 	client, err := utils_redis.NewClient(context.TODO(), opts)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("new redis to %s client err", name))
+		return nil, fmt.Errorf("new redis to %s client err", name)
 	}
 
 	rds.client = client

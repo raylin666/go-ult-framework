@@ -3,22 +3,21 @@ package http
 import (
 	goerror "errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/raylin666/go-utils/validator"
-	cors "github.com/rs/cors/wrapper/gin"
-	"go.uber.org/zap"
 	nethttp "net/http"
 	"runtime/debug"
 	"time"
-	"ult/internal/constant/errcode"
-	"ult/pkg/code"
-	"ult/pkg/global"
+	"ult/errcode"
 	"ult/pkg/logger"
 	"ult/pkg/proposal"
+
+	"github.com/gin-gonic/gin"
+	"github.com/raylin666/go-utils/v2/validator"
+	cors "github.com/rs/cors/wrapper/gin"
+	"go.uber.org/zap"
 )
 
 const (
-	_Core_ContextNameKey_ = "_core_context_"
+	CoreContextNameKey = "_core_context_"
 )
 
 // handlerMiddlewares 注册处理中间件
@@ -27,12 +26,12 @@ func (srv *HTTPServer) handlerMiddlewares() {
 	srv.engine.Use(srv.handlerCORS())
 
 	// 注册数据验证器
-	var validator_handler = validator.New(
+	var validatorHandler = validator.New(
 		validator.WithLocale(srv.config.Validator.Locale),
 		validator.WithTagname(srv.config.Validator.Tagname))
 
 	// 请求处理 -> 接口异常及响应将在请求处理的 defer 函数内处理
-	srv.engine.Use(srv.handlerRequest(validator_handler))
+	srv.engine.Use(srv.handlerRequest(validatorHandler))
 }
 
 // handlerCORS 跨域处理
@@ -71,11 +70,11 @@ func (srv *HTTPServer) handlerRequest(validator validator.Validator) gin.Handler
 		ts := time.Now()
 
 		// 初始化核心上下文 Context
-		var appctx = newContext(ctx)
-		defer recoveryContext(appctx)
-		appctx.init()
-		appctx.WithValidator(validator)
-		ctx.Set(_Core_ContextNameKey_, appctx)
+		var appCtx = newContext(ctx)
+		defer recoveryContext(appCtx)
+		appCtx.init()
+		appCtx.WithValidator(validator)
+		ctx.Set(CoreContextNameKey, appCtx)
 
 		defer func() {
 			// 异常恢复处理
@@ -97,23 +96,23 @@ func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	var stack = string(debug.Stack())
 	srv.logger.UseApp(ctx).Error("got panic", zap.String("panic", fmt.Sprintf("%+v", err)), zap.String("stack", stack))
 	// 获取核心上下文 Context
-	appctx := ctx.Value(_Core_ContextNameKey_).(Context)
-	if appctx == nil {
+	appCtx := ctx.Value(CoreContextNameKey).(Context)
+	if appCtx == nil {
 		return
 	}
 
 	// 设置错误
-	appctx.WithAbortError(errcode.NewError(code.ServerError).WithStackError(goerror.New("got panic")))
+	appCtx.WithAbortError(errcode.New(errcode.ServerError).WithStackError(goerror.New("got panic")))
 
 	// 设置告警提醒 (如发邮件通知、如钉钉告警)
 	if notifyHandler := srv.option.alertNotify; notifyHandler != nil {
 		notifyHandler(&proposal.AlertMessage{
 			ProjectName:  srv.config.App.Name,
 			Environment:  srv.config.Environment,
-			TraceID:      appctx.TraceID(),
-			HOST:         appctx.Host(),
-			URI:          appctx.URI(),
-			Method:       appctx.Method(),
+			TraceID:      appCtx.TraceID(),
+			HOST:         appCtx.Host(),
+			URI:          appCtx.URI(),
+			Method:       appCtx.Method(),
 			ErrorMessage: err,
 			ErrorStack:   stack,
 			Timestamp:    time.Now(),
@@ -124,7 +123,7 @@ func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 // handlerResponse 响应处理 (由 handlerRequest 内 defer 函数处理, 请勿单独调用)
 func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	var (
-		response        interface{}
+		resp            interface{}
 		httpCode        int
 		businessCode    int
 		businessMessage string
@@ -133,17 +132,17 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	)
 
 	// 获取核心上下文 Context
-	appctx := ctx.Value(_Core_ContextNameKey_).(Context)
-	if appctx == nil {
+	appCtx := ctx.Value(CoreContextNameKey).(Context)
+	if appCtx == nil {
 		return
 	}
 
 	// 获取链路追踪 TraceId
-	traceId = appctx.TraceID()
+	traceId = appCtx.TraceID()
 
 	// 发生错误, 进行返回
 	if ctx.IsAborted() {
-		if err := appctx.getAbortError(); err != nil {
+		if err := appCtx.getAbortError(); err != nil {
 			httpCode = err.HTTPCode()
 			businessCode = err.BusinessCode()
 			businessMessage = err.Message()
@@ -155,9 +154,9 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 						ProjectName:  srv.config.App.Name,
 						Environment:  srv.config.Environment,
 						TraceID:      traceId,
-						HOST:         appctx.Host(),
-						URI:          appctx.URI(),
-						Method:       appctx.Method(),
+						HOST:         appCtx.Host(),
+						URI:          appCtx.URI(),
+						Method:       appCtx.Method(),
 						ErrorMessage: err,
 						ErrorStack:   fmt.Sprintf("%+v", stackErr),
 						Timestamp:    time.Now(),
@@ -165,23 +164,23 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 				}
 			}
 
-			response = global.NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
+			resp = NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
 		} else {
-			err = errcode.ErrorUnknownError
+			err = errcode.ErrUnknownError
 			httpCode = err.HTTPCode()
 			businessCode = err.BusinessCode()
 			businessMessage = err.Message()
 			stackErr = ctx.Err()
-			response = global.NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
+			resp = NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
 		}
 
-		ctx.JSON(httpCode, response)
+		ctx.JSON(httpCode, resp)
 	} else {
 		// 响应正确返回
 		httpCode = nethttp.StatusOK
 		businessMessage = "OK"
-		response = global.NewSuccessResponse(traceId, appctx.getPayload())
-		ctx.JSON(httpCode, response)
+		resp = NewSuccessResponse(traceId, appCtx.getPayload())
+		ctx.JSON(httpCode, resp)
 	}
 
 	costSeconds := time.Since(reqTime).Seconds()
@@ -189,14 +188,14 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	// 请求日志打印
 	srv.logger.RequestLog(ctx, &logger.RequestLogFormat{
 		ClientIp:          ctx.ClientIP(),
-		Method:            appctx.Method(),
-		Path:              appctx.URI(),
+		Method:            appCtx.Method(),
+		Path:              appCtx.URI(),
 		RequestProto:      ctx.Request.Proto,
 		RequestReferer:    ctx.Request.Referer(),
 		RequestUa:         ctx.Request.UserAgent(),
 		RequestPostData:   ctx.Request.PostForm.Encode(),
-		RequestBodyData:   string(appctx.RawData()),
-		RequestHeaderData: appctx.Header(),
+		RequestBodyData:   string(appCtx.RawData()),
+		RequestHeaderData: appCtx.Header(),
 		HttpCode:          ctx.Writer.Status(),
 		BusinessCode:      businessCode,
 		BusinessMessage:   businessMessage,

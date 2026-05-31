@@ -8,20 +8,25 @@ package main
 
 import (
 	"ult/config"
+	"ult/internal/api"
+	"ult/internal/app"
+	"ult/internal/data"
+	"ult/internal/data/repo"
 	"ult/internal/router"
 	"ult/internal/server"
-	"ult/pkg/global"
-	"ult/pkg/logger"
-	"ult/pkg/repositories"
+	"ult/internal/service"
+	pkgapp "ult/pkg/app"
 )
 
-// Injectors from wire.go:
-
-// initApp init application.
-func initApp(conf *config.Config, log *logger.Logger, repo repositories.DataRepo) (*global.App, func(), error) {
-	httpRouter := router.NewHTTPRouter()
-	httpServer := server.NewHTTPServer(conf, log, repo, httpRouter)
-	app := newApp(conf, log, httpServer)
+func initApp(conf *config.Config, tools *app.Tools) (*pkgapp.App, func(), error) {
+	dataData, cleanup := data.NewData(conf, tools)
+	testRepo := repo.NewTestRepo(dataData)
+	heartbeatService := service.NewHeartbeatService(testRepo, tools)
+	heartbeatHandler := api.NewHeartbeatHandler(heartbeatService, tools)
+	httpRouter := router.NewHTTPRouter(heartbeatHandler)
+	httpServer := server.NewHTTPServer(conf, tools.Logger(), httpRouter)
+	app := newApp(conf, tools.Logger(), httpServer)
 	return app, func() {
+		cleanup()
 	}, nil
 }

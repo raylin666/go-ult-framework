@@ -1,14 +1,14 @@
 package main
 
 import (
-	utils_logger "github.com/raylin666/go-utils/logger"
-	"github.com/raylin666/go-utils/server/system"
 	"ult/config"
 	genDb "ult/generate/gormgen/db"
-	"ult/internal/app"
-	"ult/internal/constant/defined"
 	"ult/pkg/db"
 	"ult/pkg/logger"
+	"ult/pkg/repositories"
+
+	utils_logger "github.com/raylin666/go-utils/v2/logger"
+	"github.com/raylin666/go-utils/v2/server/system"
 )
 
 func main() {
@@ -18,26 +18,30 @@ func main() {
 		panic(err)
 	}
 
+	// 初始化 Environment
+	var environment = system.NewEnvironment(conf.Environment)
+	conf.Environment = environment.Value()
+
 	// 初始化 Datetime
-	app.Datetime = system.NewDatetime(
+	var datetime = system.NewDatetime(
 		system.WithLocation(conf.Datetime.Location),
 		system.WithCSTLayout(conf.Datetime.CSTLayout))
 
 	log, err := logger.NewJSONLogger(
 		utils_logger.WithField(utils_logger.AppKey, conf.App.Name),
-		utils_logger.WithField(utils_logger.EnvironmentKey, conf.Env.Value()),
-		utils_logger.WithTimeLayout(app.Datetime.CSTLayout()))
+		utils_logger.WithField(utils_logger.EnvironmentKey, conf.Environment),
+		utils_logger.WithTimeLayout(datetime.CSTLayout()))
 	if err != nil {
 		panic(err)
 	}
 
-	defaultDB, err := db.NewDb(defined.DB_CONNECTION_DEFAULT_NAME, conf.DB[defined.DB_CONNECTION_DEFAULT_NAME], log)
+	defaultDB, err := db.NewDb(repositories.DbConnectionDefaultName, conf.DB[repositories.DbConnectionDefaultName], log)
 	if err != nil {
 		panic(err)
 	}
 
 	// 生成文件存放目录
-	var outPath = "../../internal/repositories/dbrepo/query"
+	var outPath = "../../internal/data/dbquery"
 
 	// 执行生成默认数据库对应的模型文件
 	genDb.NewGeneratorDefaultDb(defaultDB, outPath)

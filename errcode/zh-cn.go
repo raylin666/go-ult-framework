@@ -1,7 +1,6 @@
-package code
+package errcode
 
 var zhCNText = map[int]string{
-	/* 系统相关 */
 	ServerError:           "内部服务器错误",
 	AuthorizationError:    "签名信息错误",
 	ParamBindError:        "参数信息错误",

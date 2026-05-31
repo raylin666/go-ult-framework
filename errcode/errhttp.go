@@ -1,13 +1,8 @@
-package code
+package errcode
 
 import "net/http"
 
-/**
-HTTP 状态码设定
-*/
-
 var httpCode = map[int]int{
-	/* 系统相关 */
 	ServerError:           http.StatusInternalServerError,
 	AuthorizationError:    http.StatusUnauthorized,
 	ParamBindError:        http.StatusBadRequest,
