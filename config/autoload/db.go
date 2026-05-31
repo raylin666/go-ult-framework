@@ -15,4 +15,6 @@ type DB struct {
 	MaxLifeTime int64  `yaml:"max_life_time"`
 	ParseTime   string `yaml:"parse_time"`
 	Loc         string `yaml:"loc"`
+	MaxRetries  int    `yaml:"max_retries"`
+	RetryDelay  int    `yaml:"retry_delay"`
 }

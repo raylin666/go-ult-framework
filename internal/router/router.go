@@ -28,6 +28,8 @@ func NewHTTPRouter(heartbeat api.HeartbeatInterface) HTTPRouter {
 				Heartbeat: heartbeat,
 			},
 		}
+
+		// 健康检查路由
 		r.heartbeat(r.g.Group("/heartbeat"))
 	}
 }

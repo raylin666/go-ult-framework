@@ -1,3 +1,4 @@
+// Package repositories 提供数据仓库抽象层。
 package repositories
 
 import (
@@ -12,18 +13,29 @@ import (
 
 var _ DataRepo = (*dataRepo)(nil)
 
+// DataRepo 数据仓库接口，定义数据库和 Redis 连接管理操作。
 type DataRepo interface {
-	DB(name string) db.Db
-	DbRepo() DbRepo
-	Redis(name string) cache.Redis
-	RedisRepo() RedisRepo
+	DB(name string) db.Db        // 获取指定名称的数据库连接
+	DbRepo() DbRepo              // 获取数据库仓库
+	Redis(name string) cache.Redis // 获取指定名称的 Redis 连接
+	RedisRepo() RedisRepo        // 获取 Redis 仓库
 }
 
+// dataRepo 数据仓库实例，管理数据库和 Redis 连接。
 type dataRepo struct {
-	db    *dbRepo
-	redis *redisRepo
+	db    *dbRepo    // 数据库仓库
+	redis *redisRepo // Redis 仓库
 }
 
+// NewDataRepo 创建新的数据仓库实例。
+// 根据配置初始化数据库和 Redis 连接。
+//
+// 参数:
+//   - logger: 日志记录器
+//   - conf: 应用配置
+//
+// 返回:
+//   - DataRepo: 数据仓库实例
 func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 	var (
 		ctx = context.Background()
@@ -81,18 +93,40 @@ func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 	return repo
 }
 
+// DB 获取指定名称的数据库连接。
+//
+// 参数:
+//   - name: 连接名称
+//
+// 返回:
+//   - db.Db: 数据库连接实例
 func (repo *dataRepo) DB(name string) db.Db {
 	return repo.db.resource[name]
 }
 
+// DbRepo 获取数据库仓库。
+//
+// 返回:
+//   - DbRepo: 数据库仓库实例
 func (repo *dataRepo) DbRepo() DbRepo {
 	return repo.db
 }
 
+// Redis 获取指定名称的 Redis 连接。
+//
+// 参数:
+//   - name: 连接名称
+//
+// 返回:
+//   - cache.Redis: Redis 连接实例
 func (repo *dataRepo) Redis(name string) cache.Redis {
 	return repo.redis.resource[name]
 }
 
+// RedisRepo 获取 Redis 仓库。
+//
+// 返回:
+//   - RedisRepo: Redis 仓库实例
 func (repo *dataRepo) RedisRepo() RedisRepo {
 	return repo.redis
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func (r *httpRouter) heartbeat(group http.RouterGroup) {
-	group.GET("", r.handle.Heartbeat.PONE())
+	group.GET("/state", r.handle.Heartbeat.State())
 }

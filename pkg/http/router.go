@@ -1,14 +1,17 @@
+// Package http 提供 HTTP 服务器实现，基于 Gin 框架封装。
 package http
 
 import "github.com/gin-gonic/gin"
 
 var _ IRouter = (*Router)(nil)
 
+// RouterGroup 路由组接口，定义路由分组功能。
 type RouterGroup interface {
 	Group(relativePath string, handlers ...HandlerFunc) RouterGroup
 	IRouter
 }
 
+// IRouter 路由接口，定义 HTTP 方法路由注册功能。
 type IRouter interface {
 	Any(relativePath string, handlers ...HandlerFunc)
 	GET(relativePath string, handlers ...HandlerFunc)
@@ -20,53 +23,77 @@ type IRouter interface {
 	HEAD(relativePath string, handlers ...HandlerFunc)
 }
 
+// Router 路由结构体，封装 Gin 路由组。
 type Router struct {
 	*gin.RouterGroup
 }
 
+// NewRouter 创建新的 Router 实例。
+//
+// 参数:
+//   - group: Gin 路由组
+//
+// 返回:
+//   - *Router: 新创建的路由实例
 func NewRouter(group *gin.RouterGroup) *Router {
 	var r = new(Router)
 	r.RouterGroup = group
 	return r
 }
 
+// Group 创建子路由组。
+//
+// 参数:
+//   - relativePath: 相对路径
+//   - handlers: 处理函数列表
+//
+// 返回:
+//   - RouterGroup: 新创建的路由组
 func (r *Router) Group(relativePath string, handlers ...HandlerFunc) RouterGroup {
 	return &Router{r.RouterGroup.Group(relativePath, wrapHandlers(handlers...)...)}
 }
 
+// Any 注册所有 HTTP 方法的路由。
 func (r *Router) Any(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.Any(relativePath, wrapHandlers(handlers...)...)
 }
 
+// GET 注册 GET 方法路由。
 func (r *Router) GET(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.GET(relativePath, wrapHandlers(handlers...)...)
 }
 
+// POST 注册 POST 方法路由。
 func (r *Router) POST(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.POST(relativePath, wrapHandlers(handlers...)...)
 }
 
+// DELETE 注册 DELETE 方法路由。
 func (r *Router) DELETE(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.DELETE(relativePath, wrapHandlers(handlers...)...)
 }
 
+// PATCH 注册 PATCH 方法路由。
 func (r *Router) PATCH(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.PATCH(relativePath, wrapHandlers(handlers...)...)
 }
 
+// PUT 注册 PUT 方法路由。
 func (r *Router) PUT(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.PUT(relativePath, wrapHandlers(handlers...)...)
 }
 
+// OPTIONS 注册 OPTIONS 方法路由。
 func (r *Router) OPTIONS(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.OPTIONS(relativePath, wrapHandlers(handlers...)...)
 }
 
+// HEAD 注册 HEAD 方法路由。
 func (r *Router) HEAD(relativePath string, handlers ...HandlerFunc) {
 	r.RouterGroup.HEAD(relativePath, wrapHandlers(handlers...)...)
 }
 
-// wrapHandlers 包装处理程序
+// wrapHandlers 包装处理函数，将自定义 HandlerFunc 转换为 Gin HandlerFunc。
 func wrapHandlers(handlers ...HandlerFunc) []gin.HandlerFunc {
 	funcs := make([]gin.HandlerFunc, len(handlers))
 	for i, handler := range handlers {

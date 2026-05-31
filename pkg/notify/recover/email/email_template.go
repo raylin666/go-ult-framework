@@ -1,3 +1,4 @@
+// Package email 提供邮件告警通知功能。
 package email
 
 import (
@@ -7,7 +8,23 @@ import (
 	"time"
 )
 
-// NewHTMLEmail 告警邮件模板
+// newHTMLEmail 生成告警邮件 HTML 内容。
+// 根据告警信息生成邮件主题和 HTML 格式的邮件正文。
+//
+// 参数:
+//   - service: 服务名称
+//   - method: HTTP 方法
+//   - host: 请求主机
+//   - uri: 请求 URI
+//   - id: 链路追踪 ID
+//   - msg: 错误消息
+//   - t: 时间戳
+//   - stack: 错误堆栈
+//
+// 返回:
+//   - subject: 件主题
+//   - body: 件正文
+//   - err: 生成错误
 func newHTMLEmail(service, method, host, uri, id string, msg interface{}, t time.Time, stack string) (subject string, body string, err error) {
 	mailData := &struct {
 		Service   string
@@ -36,7 +53,15 @@ func newHTMLEmail(service, method, host, uri, id string, msg interface{}, t time
 	return
 }
 
-// getEmailHTMLContent 获取邮件模板
+// getEmailHTMLContent 渲染邮件模板生成 HTML 内容。
+//
+// 参数:
+//   - mailTpl: 件模板字符串
+//   - mailData: 模板数据
+//
+// 返回:
+//   - string: HTML 内容
+//   - error: 渲染错误
 func getEmailHTMLContent(mailTpl string, mailData interface{}) (string, error) {
 	tpl, err := template.New("email notify tpl").Parse(mailTpl)
 	if err != nil {

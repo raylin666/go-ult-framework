@@ -5,3 +5,4 @@ import (
 )
 
 var ProviderSet = wire.NewSet(NewHeartbeatService)
+

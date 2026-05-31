@@ -9,24 +9,24 @@ import (
 var _ HeartbeatInterface = (*HeartbeatHandler)(nil)
 
 type HeartbeatInterface interface {
-	PONE() http.HandlerFunc
+	State() http.HandlerFunc
 }
 
 type HeartbeatHandler struct {
-	service *service.HeartbeatService
+	service *service.HealtbeatService
 	tools   *app.Tools
 }
 
-func NewHeartbeatHandler(service *service.HeartbeatService, tools *app.Tools) HeartbeatInterface {
+func NewHeartbeatHandler(service *service.HealtbeatService, tools *app.Tools) HeartbeatInterface {
 	return &HeartbeatHandler{
 		service: service,
 		tools:   tools,
 	}
 }
 
-func (h *HeartbeatHandler) PONE() http.HandlerFunc {
+func (h *HeartbeatHandler) State() http.HandlerFunc {
 	return func(ctx http.Context) {
-		var resp = h.service.PONE(ctx.RequestContext())
+		var resp = h.service.State(ctx.RequestContext())
 		ctx.WithPayload(resp)
 	}
 }

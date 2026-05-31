@@ -1,3 +1,4 @@
+// Package http 提供 HTTP 服务器实现，基于 Gin 框架封装。
 package http
 
 import (
@@ -16,11 +17,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// CoreContextNameKey 用于在 Gin.Context 中存储自定义 Context 的键名。
 const (
 	CoreContextNameKey = "_core_context_"
 )
 
-// handlerMiddlewares 注册处理中间件
+// handlerMiddlewares 注册 HTTP 服务器的核心中间件链。
+// 设置 CORS 处理和请求处理中间件。
 func (srv *HTTPServer) handlerMiddlewares() {
 	// 跨域处理
 	srv.engine.Use(srv.handlerCORS())
@@ -34,7 +37,8 @@ func (srv *HTTPServer) handlerMiddlewares() {
 	srv.engine.Use(srv.handlerRequest(validatorHandler))
 }
 
-// handlerCORS 跨域处理
+// handlerCORS 返回用于 CORS（跨域资源共享）处理的 Gin 中间件。
+// 允许配置的域名从浏览器访问 API。
 func (srv *HTTPServer) handlerCORS() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if len(srv.option.cors.domains) > 0 {
@@ -58,7 +62,8 @@ func (srv *HTTPServer) handlerCORS() gin.HandlerFunc {
 	}
 }
 
-// handlerRequest 请求处理
+// handlerRequest 请求处理中间件。
+// 初始化核心上下文 Context，处理请求验证和响应处理。
 func (srv *HTTPServer) handlerRequest(validator validator.Validator) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 拦截 404 请求路由
@@ -90,14 +95,16 @@ func (srv *HTTPServer) handlerRequest(validator validator.Validator) gin.Handler
 	}
 }
 
-// handlerRecovery 异常/错误处理 (由 handlerRequest 内 defer 函数处理, 请勿单独调用)
+// handlerRecovery 异常/错误恢复处理。
+// 由 handlerRequest 内 defer 函数处理，请勿单独调用。
+// 记录 panic 信息和堆栈，设置告警通知。
 func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	// 获取堆栈信息
 	var stack = string(debug.Stack())
 	srv.logger.UseApp(ctx).Error("got panic", zap.String("panic", fmt.Sprintf("%+v", err)), zap.String("stack", stack))
 	// 获取核心上下文 Context
-	appCtx := ctx.Value(CoreContextNameKey).(Context)
-	if appCtx == nil {
+	appCtx, ok := ctx.Value(CoreContextNameKey).(Context)
+	if !ok || appCtx == nil {
 		return
 	}
 
@@ -120,8 +127,11 @@ func (srv *HTTPServer) handlerRecovery(ctx *gin.Context, err interface{}) {
 	}
 }
 
-// handlerResponse 响应处理 (由 handlerRequest 内 defer 函数处理, 请勿单独调用)
+// handlerResponse 响应处理。
+// 由 handlerRequest 内 defer 函数处理，请勿单独调用。
+// 根据请求状态生成成功或错误响应，记录请求日志。
 func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
+
 	var (
 		resp            interface{}
 		httpCode        int
@@ -132,8 +142,8 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	)
 
 	// 获取核心上下文 Context
-	appCtx := ctx.Value(CoreContextNameKey).(Context)
-	if appCtx == nil {
+	appCtx, ok := ctx.Value(CoreContextNameKey).(Context)
+	if !ok || appCtx == nil {
 		return
 	}
 

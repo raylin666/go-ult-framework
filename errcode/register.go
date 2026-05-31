@@ -2,6 +2,7 @@ package errcode
 
 import (
 	"strings"
+	"sync"
 )
 
 var registry = &codeRegistry{
@@ -11,12 +12,16 @@ var registry = &codeRegistry{
 }
 
 type codeRegistry struct {
+	mu        sync.RWMutex
 	local     string
 	codeTexts map[int]string
 	httpCodes map[int]int
 }
 
 func NewRegistry(local string) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
 	local = strings.ToLower(local)
 	switch local {
 	case ZhCN:
@@ -36,12 +41,18 @@ func GetRegistry() *codeRegistry {
 }
 
 func RegisterHTTPCodes(codes map[int]int) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
 	for key, value := range codes {
 		registry.httpCodes[key] = value
 	}
 }
 
 func RegisterTexts(local string, texts map[int]string) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
 	local = strings.ToLower(local)
 	for key, value := range texts {
 		registry.codeTexts[key] = value
@@ -49,10 +60,16 @@ func RegisterTexts(local string, texts map[int]string) {
 }
 
 func GetText(code int) string {
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+
 	return registry.codeTexts[code]
 }
 
 func GetHTTPCode(code int) int {
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+
 	return registry.httpCodes[code]
 }
 
