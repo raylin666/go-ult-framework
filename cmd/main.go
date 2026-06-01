@@ -19,8 +19,7 @@ func newApp(
 	config *config.Config,
 	logger *logger.Logger,
 	hs *http.HTTPServer) *pkgapp.App {
-	var appCtx = context.Background()
-	var appCancel = func() {}
+	appCtx, appCancel := context.WithCancel(context.Background())
 	return pkgapp.NewApp(
 		config,
 		logger,

@@ -144,11 +144,18 @@ func (app *App) Context() stdCtx.Context {
 
 // Run 运行应用。
 // 启动所有注册的服务器，并设置优雅关闭处理。
+// 优雅关闭流程：
+// 1. 收到关闭信号（SIGINT/SIGTERM）
+// 2. 先取消应用上下文，通知所有 goroutine 停止
+// 3. 调用各服务器的 Stop 方法，等待连接关闭
+// 4. 执行清理函数
 //
 // 返回:
 //   - error: 运行错误
 func (app *App) Run() error {
 	ctx := NewAppContext(app.context, app)
+
+	// 注册服务器关闭函数
 	for _, server := range app.servers {
 		srvType := server.ServerType()
 		app.cancel = append(app.cancel, func() {
@@ -158,7 +165,6 @@ func (app *App) Run() error {
 			} else {
 				app.logger.UseApp(ctx).Info(fmt.Sprintf("%s server is success close", srvType))
 			}
-
 			server.CancelAfter()
 		})
 
@@ -173,6 +179,7 @@ func (app *App) Run() error {
 		server.StartAfter()
 	}
 
+	// 等待关闭信号并执行优雅关闭
 	app.shutdown.Close(app.cancel...)
 	return nil
 }

@@ -1,5 +1,5 @@
 // Package cache 提供 Redis 缓存连接封装。
-// 基于 go-utils/redis 实现，支持连接池管理和配置化连接。
+// 基于 go-utils/redis 实现，支持连接池管理、连接重试和配置化连接。
 package cache
 
 import (
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 	"ult/config/autoload"
+	"ult/pkg/logger"
 
 	utils_redis "github.com/raylin666/go-utils/v2/cache/redis"
 )
@@ -23,20 +24,34 @@ type Redis interface {
 // redis Redis 客户端实例，封装 go-utils Redis 客户端。
 type redis struct {
 	client utils_redis.Client
+	logger *logger.Logger
 }
 
 // NewRedis 创建新的 Redis 连接实例。
-// 根据配置初始化 Redis 客户端，支持连接池、超时等配置。
+// 支持连接重试机制，可配置最大重试次数和重试间隔。
 //
 // 参数:
-//   - name: Redis 连接名称，用于错误标识
+//   - name: Redis 连接名称，用于日志标识
 //   - config: Redis 配置（地址、端口、密码、连接池等）
+//   - logger: 日志记录器实例
 //
 // 返回:
 //   - Redis: Redis 客户端实例
 //   - error: 连接创建错误
-func NewRedis(name string, config autoload.Redis) (Redis, error) {
+func NewRedis(name string, config autoload.Redis, logger *logger.Logger) (Redis, error) {
 	var rds = new(redis)
+	rds.logger = logger
+
+	maxRetries := config.MaxRetries
+	if maxRetries <= 0 {
+		maxRetries = 3
+	}
+
+	retryDelay := config.RetryDelay
+	if retryDelay <= 0 {
+		retryDelay = 1
+	}
+
 	opts := new(utils_redis.Options)
 	opts.Addr = fmt.Sprintf("%s:%d", config.Addr, config.Port)
 	opts.Network = config.Network
@@ -56,9 +71,21 @@ func NewRedis(name string, config autoload.Redis) (Redis, error) {
 	opts.PoolSize = config.PoolSize
 	opts.PoolTimeout = time.Duration(config.PoolTimeout)
 
-	client, err := utils_redis.NewClient(context.TODO(), opts)
+	var client utils_redis.Client
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		client, err = utils_redis.NewClient(context.TODO(), opts)
+		if err == nil {
+			break
+		}
+
+		logger.UseApp(context.TODO()).Warn(fmt.Sprintf("redis connection %s attempt %d/%d failed: %v, retrying in %d seconds", name, i+1, maxRetries, err, retryDelay))
+		time.Sleep(time.Duration(retryDelay) * time.Second)
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("new redis to %s client err", name)
+		return nil, fmt.Errorf("new redis to %s client err after %d retries", name, maxRetries)
 	}
 
 	rds.client = client

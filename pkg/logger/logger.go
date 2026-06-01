@@ -4,12 +4,12 @@ package logger
 
 import (
 	"context"
-	"reflect"
 	"time"
 	"ult/pkg/types"
 
 	"github.com/raylin666/go-utils/v2/logger"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // 日志类型常量。
@@ -89,20 +89,47 @@ type RequestLogFormat struct {
 	CostSeconds       float64             `json:"cost_seconds"`        // 耗时（秒）
 }
 
+// MarshalLogObject 实现 zapcore.ObjectMarshaler 接口。
+// 使用直接字段访问替代反射，提升性能。
+//
+// 参数:
+//   - enc: Zap 对象编码器
+//
+// 返回:
+//   - error: 编码错误
+func (rlf *RequestLogFormat) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("client_ip", rlf.ClientIp)
+	enc.AddString("method", rlf.Method)
+	enc.AddString("path", rlf.Path)
+	enc.AddString("request_proto", rlf.RequestProto)
+	enc.AddString("request_referer", rlf.RequestReferer)
+	enc.AddString("request_ua", rlf.RequestUa)
+	enc.AddString("request_post_data", rlf.RequestPostData)
+	enc.AddString("request_body_data", rlf.RequestBodyData)
+	enc.AddInt("http_code", rlf.HttpCode)
+	enc.AddInt("business_code", rlf.BusinessCode)
+	enc.AddString("business_message", rlf.BusinessMessage)
+	enc.AddTime("request_time", rlf.RequestTime)
+	enc.AddTime("response_time", rlf.ResponseTime)
+	enc.AddFloat64("cost_seconds", rlf.CostSeconds)
+
+	if rlf.RequestHeaderData != nil {
+		enc.AddReflected("request_header_data", rlf.RequestHeaderData)
+	}
+
+	return nil
+}
+
 // RequestLog 打印请求日志。
-// 使用反射遍历结构体字段，自动添加所有字段到日志中。
+// 使用 zap.Object 方式，通过 MarshalLogObject 接口编码日志字段。
 //
 // 参数:
 //   - ctx: 上下文
 //   - rlf: 请求日志格式
 //   - err: 错误信息（可选）
 func (log *Logger) RequestLog(ctx context.Context, rlf *RequestLogFormat, err error) {
-	var types = reflect.TypeOf(rlf)
-	var values = reflect.ValueOf(rlf)
-	var zapLog = log.UseRequest(ctx)
-	for i := 0; i < types.Elem().NumField(); i++ {
-		zapLog = zapLog.With(zap.Any(types.Elem().Field(i).Tag.Get("json"), values.Elem().Field(i).Interface()))
-	}
-
-	zapLog.With(zap.Error(err)).Info("请求日志")
+	log.UseRequest(ctx).
+		With(zap.Object("request", rlf)).
+		With(zap.Error(err)).
+		Info("请求日志")
 }

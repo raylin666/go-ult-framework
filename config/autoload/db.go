@@ -5,7 +5,7 @@ type DB struct {
 	Driver      string `yaml:"driver"`
 	DbName      string `yaml:"db_name"`
 	Host        string `yaml:"host"`
-	UserName    string `yaml:"user_name"`
+	UserName    string `yaml:"username"`
 	Password    string `yaml:"password"`
 	Charset     string `yaml:"charset"`
 	Port        int    `yaml:"port"`

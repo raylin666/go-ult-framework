@@ -77,13 +77,21 @@ func NewData(c *config.Config, tools *app.Tools) (Data, func()) {
 	data.ctx = context.Background()
 
 	cleanup := func() {
-		for dbName, dbRepo := range data.dataRepo.DbRepo.All() {
-			_ = dbRepo.Close()
-			tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing db: %s", dbName))
+		if data.dataRepo.DbRepo != nil {
+			for dbName, dbRepo := range data.dataRepo.DbRepo.All() {
+				if dbRepo != nil {
+					_ = dbRepo.Close()
+				}
+				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing db: %s", dbName))
+			}
 		}
-		for redisName, redisRepo := range data.dataRepo.RedisRepo.All() {
-			_ = redisRepo.Close()
-			tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing redis: %s", redisName))
+		if data.dataRepo.RedisRepo != nil {
+			for redisName, redisRepo := range data.dataRepo.RedisRepo.All() {
+				if redisRepo != nil {
+					_ = redisRepo.Close()
+				}
+				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing redis: %s", redisName))
+			}
 		}
 	}
 

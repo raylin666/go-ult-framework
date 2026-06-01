@@ -1,13 +1,19 @@
+// Package app 提供应用工具包。
 package app
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"runtime"
 	"ult/config"
+
+	"github.com/fatih/color"
 )
 
-// NewLogo 打印项目服务启动信息
+// NewLogo 打印项目服务启动信息。
+// 显示项目 Logo、Go 版本、系统信息、服务配置等信息。
+//
+// 参数:
+//   - config: 应用配置
 func NewLogo(config *config.Config) {
 	// see https://patorjk.com/software/taag/#p=testall&f=Graffiti&t=ult
 	var logo = `

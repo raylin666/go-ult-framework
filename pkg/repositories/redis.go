@@ -5,7 +5,6 @@ import (
 	"ult/pkg/cache"
 )
 
-// Redis 连接默认名称常量。
 const (
 	RedisConnectionDefaultName = "default" // 默认 Redis 连接名称
 )
@@ -14,10 +13,10 @@ var _ RedisRepo = (*redisRepo)(nil)
 
 // RedisRepo Redis 仓库接口，定义 Redis 连接管理操作。
 type RedisRepo interface {
-	Count() int                   // 获取连接数量
-	Has(name string) bool         // 检查连接是否存在
+	Count() int                    // 获取连接数量
+	Has(name string) bool          // 检查连接是否存在
 	Redis(name string) cache.Redis // 获取指定名称的 Redis 连接
-	All() map[string]cache.Redis  // 获取所有 Redis 连接
+	All() map[string]cache.Redis   // 获取所有 Redis 连接
 }
 
 // redisRepo Redis 仓库实例，管理多个 Redis 连接。

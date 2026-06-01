@@ -123,6 +123,12 @@ type context struct {
 	ctx *gin.Context
 }
 
+// reset 重置上下文对象，清空所有字段。
+// 在归还到 Pool 前调用，确保下次使用时数据干净。
+func (c *context) reset() {
+	c.ctx = nil
+}
+
 // init 初始化上下文，读取并存储原始请求体。
 // 这允许在请求处理过程中多次读取请求体。
 func (c *context) init() {
@@ -261,7 +267,7 @@ func (c *context) WithPayload(payload interface{}) {
 
 // getPayload 返回存储的响应数据负载。
 func (c *context) getPayload() interface{} {
-	if payload, ok := c.ctx.Get(_PayloadName_); ok != false {
+	if payload, ok := c.ctx.Get(_PayloadName_); ok {
 		return payload
 	}
 	return nil
@@ -374,12 +380,13 @@ func newContext(ctx *gin.Context) Context {
 }
 
 // recoveryContext 使用后将上下文归还到池中。
-// 清除 Gin 上下文引用以防止内存泄漏。
+// 调用 reset 方法清空所有字段，防止内存泄漏。
+// 注意：如果未来 context 结构体添加新字段，需在 reset 方法中添加清理逻辑。
 func recoveryContext(ctx Context) {
 	c, ok := ctx.(*context)
 	if !ok {
 		return
 	}
-	c.ctx = nil
+	c.reset()
 	contextPool.Put(c)
 }

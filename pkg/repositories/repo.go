@@ -4,21 +4,22 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"ult/config"
 	"ult/pkg/cache"
 	"ult/pkg/db"
 	"ult/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 var _ DataRepo = (*dataRepo)(nil)
 
 // DataRepo 数据仓库接口，定义数据库和 Redis 连接管理操作。
 type DataRepo interface {
-	DB(name string) db.Db        // 获取指定名称的数据库连接
-	DbRepo() DbRepo              // 获取数据库仓库
+	DB(name string) db.Db          // 获取指定名称的数据库连接
+	DbRepo() DbRepo                // 获取数据库仓库
 	Redis(name string) cache.Redis // 获取指定名称的 Redis 连接
-	RedisRepo() RedisRepo        // 获取 Redis 仓库
+	RedisRepo() RedisRepo          // 获取 Redis 仓库
 }
 
 // dataRepo 数据仓库实例，管理数据库和 Redis 连接。
@@ -76,7 +77,7 @@ func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 	if lenRedis > 0 {
 		redisRepo.resource = make(map[string]cache.Redis, lenRedis)
 		for redisName, redisConfig := range redisMap {
-			redis, err := cache.NewRedis(redisName, redisConfig)
+			redis, err := cache.NewRedis(redisName, redisConfig, logger)
 			if err != nil {
 				logger.UseApp(ctx).Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
 			} else {
@@ -101,6 +102,9 @@ func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 // 返回:
 //   - db.Db: 数据库连接实例
 func (repo *dataRepo) DB(name string) db.Db {
+	if repo.db == nil {
+		return nil
+	}
 	return repo.db.resource[name]
 }
 
@@ -120,6 +124,9 @@ func (repo *dataRepo) DbRepo() DbRepo {
 // 返回:
 //   - cache.Redis: Redis 连接实例
 func (repo *dataRepo) Redis(name string) cache.Redis {
+	if repo.redis == nil {
+		return nil
+	}
 	return repo.redis.resource[name]
 }
 

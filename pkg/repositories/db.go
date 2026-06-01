@@ -4,7 +4,6 @@ package repositories
 
 import "ult/pkg/db"
 
-// 数据库连接默认名称常量。
 const (
 	DbConnectionDefaultName = "default" // 默认数据库连接名称
 )

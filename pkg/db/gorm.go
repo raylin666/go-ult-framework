@@ -3,6 +3,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"time"
 	"ult/config/autoload"
@@ -87,7 +88,7 @@ func NewDb(name string, config autoload.DB, logger *logger.Logger) (Db, error) {
 			break
 		}
 
-		logger.UseApp(nil).Warn(fmt.Sprintf("db connection %s attempt %d/%d failed: %v, retrying in %d seconds", name, i+1, maxRetries, err, retryDelay))
+		logger.UseApp(context.TODO()).Warn(fmt.Sprintf("db connection %s attempt %d/%d failed: %v, retrying in %d seconds", name, i+1, maxRetries, err, retryDelay))
 		time.Sleep(time.Duration(retryDelay) * time.Second)
 	}
 

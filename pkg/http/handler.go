@@ -40,24 +40,23 @@ func (srv *HTTPServer) handlerMiddlewares() {
 // handlerCORS 返回用于 CORS（跨域资源共享）处理的 Gin 中间件。
 // 允许配置的域名从浏览器访问 API。
 func (srv *HTTPServer) handlerCORS() gin.HandlerFunc {
+	if len(srv.option.cors.domains) > 0 {
+		return cors.New(cors.Options{
+			AllowedOrigins: srv.option.cors.domains,
+			AllowedMethods: []string{
+				nethttp.MethodHead,
+				nethttp.MethodGet,
+				nethttp.MethodPost,
+				nethttp.MethodPut,
+				nethttp.MethodPatch,
+				nethttp.MethodDelete,
+			},
+			AllowedHeaders:     srv.option.cors.domains,
+			AllowCredentials:   true,
+			OptionsPassthrough: true,
+		})
+	}
 	return func(ctx *gin.Context) {
-		if len(srv.option.cors.domains) > 0 {
-			cors.New(cors.Options{
-				AllowedOrigins: srv.option.cors.domains,
-				AllowedMethods: []string{
-					nethttp.MethodHead,
-					nethttp.MethodGet,
-					nethttp.MethodPost,
-					nethttp.MethodPut,
-					nethttp.MethodPatch,
-					nethttp.MethodDelete,
-				},
-				AllowedHeaders:     srv.option.cors.domains,
-				AllowCredentials:   true,
-				OptionsPassthrough: true,
-			})
-		}
-
 		ctx.Next()
 	}
 }
