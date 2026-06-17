@@ -5,7 +5,7 @@ import (
 	"time"
 	"ult/pkg/proposal"
 
-	"github.com/raylin666/go-utils/v2/middleware"
+	pkgmiddleware "ult/pkg/http/middleware"
 )
 
 // Option HTTP 服务器选项函数类型。
@@ -16,12 +16,12 @@ type option struct {
 	cors struct {
 		domains []string // CORS 允许的域名列表
 	}
-	pprof       bool                     // 是否启用 pprof 性能分析
-	rate        bool                     // 是否启用限流
-	openBrowser string                   // 启动时自动打开的浏览器 URL
-	alertNotify proposal.NotifyHandler   // 告警通知处理函数
-	timeout     time.Duration            // 优雅关闭超时时间
-	middlewares []middleware.HTTPHandler // 自定义中间件列表
+	pprof       bool                       // 是否启用 pprof 性能分析
+	rate        bool                       // 是否启用限流
+	openBrowser string                     // 启动时自动打开的浏览器 URL
+	alertNotify proposal.NotifyHandler     // 告警通知处理函数
+	timeout     time.Duration              // 优雅关闭超时时间
+	middlewares []pkgmiddleware.Middleware // 自定义中间件列表
 }
 
 // EnableCors 启用 CORS 跨域支持选项。
@@ -97,13 +97,14 @@ func WithTimeout(ts time.Duration) Option {
 }
 
 // WithMiddleware 添加自定义中间件选项。
+// 支持新的中间件管理系统，提供优先级控制和灵活配置。
 //
 // 参数:
 //   - m: 中间件列表
 //
 // 返回:
 //   - Option: 选项函数
-func WithMiddleware(m ...middleware.HTTPHandler) Option {
+func WithMiddleware(m ...pkgmiddleware.Middleware) Option {
 	return func(opt *option) {
 		opt.middlewares = append(opt.middlewares, m...)
 	}

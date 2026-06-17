@@ -9,15 +9,18 @@ import (
 	nethttp "net/http"
 	"time"
 	"ult/config"
+	"ult/errcode"
 	"ult/pkg/app"
+	pkgmiddleware "ult/pkg/http/middleware"
 	"ult/pkg/logger"
+	"ult/pkg/proposal"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/raylin666/go-utils/v2/http"
-	"github.com/raylin666/go-utils/v2/middleware"
 	utilsserver "github.com/raylin666/go-utils/v2/server"
 	"github.com/raylin666/go-utils/v2/server/system"
+	"github.com/raylin666/go-utils/v2/validator"
 )
 
 // HTTPServer HTTP 服务器实例，实现了 app.Server 接口。
@@ -29,10 +32,11 @@ var _ app.Server = (*HTTPServer)(nil)
 type HTTPServer struct {
 	*option
 
-	server *http.Server
-	engine *gin.Engine
-	config *config.Config
-	logger *logger.Logger
+	server     *http.Server
+	engine     *gin.Engine
+	config     *config.Config
+	logger     *logger.Logger
+	middleware *pkgmiddleware.Manager // 中间件管理器
 }
 
 // NewServer 创建新的 HTTPServer 实例。
@@ -61,8 +65,28 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 		opt(srv.option)
 	}
 
-	// 中间件处理
-	srv.server.Handler = middleware.HTTPChain(srv.middlewares...)(srv)
+	// 初始化中间件管理器
+	srv.middleware = pkgmiddleware.NewManager()
+
+	// 注册默认中间件
+	srv.registerDefaultMiddlewares()
+
+	// 注册通过 WithMiddleware 添加的自定义中间件
+	for _, m := range srv.option.middlewares {
+		srv.middleware.Use(m)
+	}
+
+	// 构建中间件链并应用到 Gin 引擎
+	handlers := srv.middleware.Build()
+	for _, handler := range handlers {
+		engine.Use(gin.HandlerFunc(handler))
+	}
+
+	// 注册请求处理中间件（初始化 Context、验证器、响应处理）
+	srv.registerRequestHandler()
+
+	// 设置服务器处理器
+	srv.server.Handler = srv
 
 	// 启动服务时自动打开浏览器操作
 	if srv.option.openBrowser != "" {
@@ -74,8 +98,6 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 		pprof.Register(srv.engine)
 	}
 
-	// 注册处理中间件
-	srv.handlerMiddlewares()
 	return srv
 }
 
@@ -157,4 +179,182 @@ func (srv *HTTPServer) Stop(ctx stdCtx.Context) error {
 	ctx, cancel := stdCtx.WithTimeout(ctx, srv.option.timeout)
 	defer cancel()
 	return srv.server.Stop(ctx)
+}
+
+// registerDefaultMiddlewares 注册默认中间件。
+// 包括 CORS 和 Recovery 中间件。
+// Request 和 Response 处理逻辑保留在 server.go 中。
+func (srv *HTTPServer) registerDefaultMiddlewares() {
+	// 注册 CORS 中间件
+	if len(srv.option.cors.domains) > 0 {
+		srv.middleware.Use(pkgmiddleware.NewCORS(&pkgmiddleware.CORSConfig{
+			Enabled:            true,
+			AllowedOrigins:     srv.option.cors.domains,
+			AllowCredentials:   true,
+			OptionsPassthrough: true,
+		}))
+	}
+
+	// 注册 Recovery 中间件
+	srv.middleware.Use(pkgmiddleware.NewRecovery(
+		&pkgmiddleware.RecoveryConfig{
+			Enabled:     true,
+			AlertNotify: srv.option.alertNotify,
+			Config:      srv.config,
+			PrintStack:  true,
+		},
+		srv.logger,
+	))
+}
+
+// UseMiddleware 添加自定义中间件。
+// 支持链式调用，可以连续添加多个中间件。
+//
+// 参数:
+//   - m: 要添加的中间件实例
+//
+// 返回:
+//   - *HTTPServer: HTTP 服务器实例（支持链式调用）
+func (srv *HTTPServer) UseMiddleware(m pkgmiddleware.Middleware) *HTTPServer {
+	srv.middleware.Use(m)
+	return srv
+}
+
+// UseMiddlewareFunc 使用函数方式添加自定义中间件。
+// 提供简化的中间件添加方式。
+//
+// 参数:
+//   - name: 中间件名称
+//   - priority: 中间件优先级
+//   - handler: 中间件处理函数
+//
+// 返回:
+//   - *HTTPServer: HTTP 服务器实例（支持链式调用）
+func (srv *HTTPServer) UseMiddlewareFunc(name string, priority pkgmiddleware.Priority, handler pkgmiddleware.HandlerFunc) *HTTPServer {
+	srv.middleware.UseFunc(name, priority, handler)
+	return srv
+}
+
+// registerRequestHandler 注册请求处理中间件。
+// 初始化 Context、设置验证器、处理响应。
+func (srv *HTTPServer) registerRequestHandler() {
+	// 注册数据验证器
+	var validatorHandler = validator.New(
+		validator.WithLocale(srv.config.Validator.Locale),
+		validator.WithTagname(srv.config.Validator.Tagname))
+
+	// 请求处理中间件
+	srv.engine.Use(func(ctx *gin.Context) {
+		// 拦截 404 请求路由
+		if ctx.Writer.Status() == nethttp.StatusNotFound {
+			return
+		}
+
+		// 请求时间
+		ts := time.Now()
+
+		// 初始化核心上下文 Context
+		var appCtx = newContext(ctx)
+		defer recoveryContext(appCtx)
+		appCtx.init()
+		appCtx.WithValidator(validatorHandler)
+		ctx.Set(CoreContextNameKey, appCtx)
+
+		defer func() {
+			// 响应处理
+			srv.handlerResponse(ts, ctx)
+		}()
+
+		ctx.Next()
+	})
+}
+
+// handlerResponse 响应处理。
+// 根据请求状态生成成功或错误响应，记录请求日志。
+//
+// 参数:
+//   - reqTime: 请求开始时间
+//   - ctx: Gin 上下文
+func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
+	var (
+		resp            interface{}
+		httpCode        int
+		businessCode    int
+		businessMessage string
+		stackErr        error
+		traceId         string
+	)
+
+	// 获取核心上下文 Context
+	appCtx, ok := ctx.Value(CoreContextNameKey).(Context)
+	if !ok || appCtx == nil {
+		return
+	}
+
+	// 获取链路追踪 TraceId
+	traceId = appCtx.TraceID()
+
+	// 发生错误, 进行返回
+	if ctx.IsAborted() {
+		if err := appCtx.GetAbortError(); err != nil {
+			httpCode = err.HTTPCode()
+			businessCode = err.BusinessCode()
+			businessMessage = err.Message()
+			stackErr = err.StackError()
+			// 设置告警提醒 (如发邮件通知、如钉钉告警)
+			if err.IsAlert() {
+				if notifyHandler := srv.option.alertNotify; notifyHandler != nil {
+					notifyHandler(&proposal.AlertMessage{
+						ProjectName:  srv.config.App.Name,
+						Environment:  srv.config.Environment,
+						TraceID:      traceId,
+						HOST:         appCtx.Host(),
+						URI:          appCtx.URI(),
+						Method:       appCtx.Method(),
+						ErrorMessage: err,
+						ErrorStack:   fmt.Sprintf("%+v", stackErr),
+						Timestamp:    time.Now(),
+					})
+				}
+			}
+
+			resp = NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
+		} else {
+			err := errcode.ErrUnknownError
+			httpCode = err.HTTPCode()
+			businessCode = err.BusinessCode()
+			businessMessage = err.Message()
+			stackErr = ctx.Err()
+			resp = NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())
+		}
+
+		ctx.JSON(httpCode, resp)
+	} else {
+		// 响应正确返回
+		httpCode = nethttp.StatusOK
+		businessMessage = "OK"
+		resp = NewSuccessResponse(traceId, appCtx.GetPayload())
+		ctx.JSON(httpCode, resp)
+	}
+
+	costSeconds := time.Since(reqTime).Seconds()
+
+	// 请求日志打印
+	srv.logger.RequestLog(ctx, &logger.RequestLogFormat{
+		ClientIp:          ctx.ClientIP(),
+		Method:            appCtx.Method(),
+		Path:              appCtx.URI(),
+		RequestProto:      ctx.Request.Proto,
+		RequestReferer:    ctx.Request.Referer(),
+		RequestUa:         ctx.Request.UserAgent(),
+		RequestPostData:   ctx.Request.PostForm.Encode(),
+		RequestBodyData:   string(appCtx.RawData()),
+		RequestHeaderData: appCtx.Header(),
+		HttpCode:          ctx.Writer.Status(),
+		BusinessCode:      businessCode,
+		BusinessMessage:   businessMessage,
+		RequestTime:       reqTime,
+		ResponseTime:      time.Now(),
+		CostSeconds:       costSeconds,
+	}, stackErr)
 }

@@ -80,11 +80,15 @@ type Context interface {
 	// WithAbortError 设置错误以中止请求。
 	// 该错误将用于响应处理。
 	WithAbortError(err errcode.BusinessError)
-	getAbortError() errcode.BusinessError
+	// GetAbortError 获取中止错误。
+	// 用于响应处理中间件获取错误信息。
+	GetAbortError() errcode.BusinessError
 
 	// WithPayload 设置成功响应的数据负载。
 	WithPayload(payload interface{})
-	getPayload() interface{}
+	// GetPayload 获取响应数据负载。
+	// 用于响应处理中间件获取数据。
+	GetPayload() interface{}
 
 	// Header 返回请求头的克隆副本。
 	Header() http.Header
@@ -115,6 +119,10 @@ type Context interface {
 
 	// ResponseWriter 返回 Gin 响应写入器。
 	ResponseWriter() gin.ResponseWriter
+
+	// GinContext 返回底层的 Gin.Context。
+	// 用于需要直接操作 Gin 上下文的场景（如第三方中间件）。
+	GinContext() *gin.Context
 }
 
 // context 是 Context 接口的内部实现。
@@ -248,7 +256,9 @@ func (c *context) WithAbortError(err errcode.BusinessError) {
 	}
 }
 
-func (c *context) getAbortError() errcode.BusinessError {
+// GetAbortError 获取中止错误。
+// 用于响应处理中间件获取错误信息。
+func (c *context) GetAbortError() errcode.BusinessError {
 	err, ok := c.ctx.Get(_AbortErrorName_)
 	if !ok {
 		return nil
@@ -265,8 +275,9 @@ func (c *context) WithPayload(payload interface{}) {
 	c.ctx.Set(_PayloadName_, payload)
 }
 
-// getPayload 返回存储的响应数据负载。
-func (c *context) getPayload() interface{} {
+// GetPayload 获取响应数据负载。
+// 用于响应处理中间件获取数据。
+func (c *context) GetPayload() interface{} {
 	if payload, ok := c.ctx.Get(_PayloadName_); ok {
 		return payload
 	}
@@ -361,6 +372,12 @@ func (c *context) RequestContext() stdCtx.Context {
 // ResponseWriter 返回 Gin 响应写入器，用于直接操作响应。
 func (c *context) ResponseWriter() gin.ResponseWriter {
 	return c.ctx.Writer
+}
+
+// GinContext 返回底层的 Gin.Context。
+// 用于需要直接操作 Gin 上下文的场景（如第三方中间件）。
+func (c *context) GinContext() *gin.Context {
+	return c.ctx
 }
 
 // contextPool 是用于复用上下文对象的 sync.Pool。

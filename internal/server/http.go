@@ -52,3 +52,7 @@ func NewHTTPServer(
 
 	return server
 }
+
+// Note: 新的中间件系统已集成到 pkg/http/server.go 中
+// 默认中间件（CORS、Recovery、Request、Response）会自动注册
+// 如需添加自定义中间件，可使用 server.UseMiddleware() 方法
