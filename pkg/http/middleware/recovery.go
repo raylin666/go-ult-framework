@@ -11,6 +11,7 @@ import (
 	"ult/errcode"
 	"ult/pkg/logger"
 	"ult/pkg/proposal"
+	pkgtypes "ult/pkg/types"
 
 	goerror "errors"
 
@@ -103,14 +104,14 @@ func (r *Recovery) handleRecovery(ctx *gin.Context, err interface{}) {
 
 	// 设置错误（使用 gin.Context 的方法）
 	ctx.AbortWithStatus(nethttp.StatusInternalServerError)
-	ctx.Set("_abort_error_", errcode.New(errcode.ServerError).WithStackError(goerror.New("got panic")))
+	ctx.Set(pkgtypes.ContextAbortErrorNameKey, errcode.New(errcode.ServerError).WithStackError(goerror.New("got panic")))
 
 	// 发送告警通知
 	if r.config.AlertNotify != nil && r.config.Config != nil {
 		r.config.AlertNotify(&proposal.AlertMessage{
 			ProjectName:  r.config.Config.App.Name,
 			Environment:  r.config.Config.Environment,
-			TraceID:      ctx.GetString("_trace_id_"),
+			TraceID:      ctx.GetString(pkgtypes.TraceIdName),
 			HOST:         ctx.Request.Host,
 			URI:          ctx.Request.URL.RequestURI(),
 			Method:       ctx.Request.Method,

@@ -9,20 +9,12 @@ import (
 	"net/url"
 	"sync"
 	"ult/errcode"
-	"ult/pkg/types"
+	pkgtypes "ult/pkg/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 	"github.com/raylin666/go-utils/v2/validator"
-)
-
-// 内部上下文键，用于存储请求数据。
-const (
-	_BodyName_       = "_body_"        // 存储原始请求体的键
-	_PayloadName_    = "_payload_"     // 存储响应数据的键
-	_AbortErrorName_ = "_abort_error_" // 存储中止错误的键
-	_ValidatorName_  = "_validator_"   // 存储验证器实例的键
 )
 
 // HandlerFunc 定义本包使用的处理函数类型。
@@ -143,11 +135,11 @@ func (c *context) init() {
 	body, err := c.ctx.GetRawData()
 	if err != nil {
 		c.ctx.AbortWithStatus(http.StatusInternalServerError)
-		c.ctx.Set(_AbortErrorName_, errcode.New(errcode.ServerError).WithDesc(err.Error()))
+		c.ctx.Set(pkgtypes.ContextAbortErrorNameKey, errcode.New(errcode.ServerError).WithDesc(err.Error()))
 		return
 	}
 
-	c.ctx.Set(_BodyName_, body)
+	c.ctx.Set(pkgtypes.ContextBodyNameKey, body)
 	c.ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 }
 
@@ -190,19 +182,19 @@ func (c *context) Redirect(code int, location string) {
 // 首先检查上下文或请求头中是否存在 TraceID。
 // 如果未找到，则生成新的 UUID 并存储。
 func (c *context) TraceID() string {
-	traceId, ok := c.ctx.Get(types.TraceIdName)
+	traceId, ok := c.ctx.Get(pkgtypes.TraceIdName)
 	if ok {
 		if tid, ok := traceId.(string); ok {
 			return tid
 		}
 	}
 
-	var headerTraceId = c.GetHeader(types.TraceIdName)
+	var headerTraceId = c.GetHeader(pkgtypes.TraceIdName)
 	if len(headerTraceId) <= 0 {
 		headerTraceId = uuid.New().String()
 	}
 
-	c.ctx.Set(types.TraceIdName, headerTraceId)
+	c.ctx.Set(pkgtypes.TraceIdName, headerTraceId)
 	return headerTraceId
 }
 
@@ -219,7 +211,7 @@ func (c *context) Validator(req interface{}) (isErr bool) {
 		return true
 	}
 
-	validate, ok := c.ctx.Get(_ValidatorName_)
+	validate, ok := c.ctx.Get(pkgtypes.ContextValidatorNameKey)
 	if !ok {
 		return true
 	}
@@ -239,7 +231,7 @@ func (c *context) Validator(req interface{}) (isErr bool) {
 
 // WithValidator 设置请求验证的验证器实例。
 func (c *context) WithValidator(v validator.Validator) {
-	c.ctx.Set(_ValidatorName_, v)
+	c.ctx.Set(pkgtypes.ContextValidatorNameKey, v)
 }
 
 // WithAbortError 设置业务错误并中止请求。
@@ -252,14 +244,14 @@ func (c *context) WithAbortError(err errcode.BusinessError) {
 		}
 
 		c.ctx.AbortWithStatus(httpCode)
-		c.ctx.Set(_AbortErrorName_, err)
+		c.ctx.Set(pkgtypes.ContextAbortErrorNameKey, err)
 	}
 }
 
 // GetAbortError 获取中止错误。
 // 用于响应处理中间件获取错误信息。
 func (c *context) GetAbortError() errcode.BusinessError {
-	err, ok := c.ctx.Get(_AbortErrorName_)
+	err, ok := c.ctx.Get(pkgtypes.ContextAbortErrorNameKey)
 	if !ok {
 		return nil
 	}
@@ -272,13 +264,13 @@ func (c *context) GetAbortError() errcode.BusinessError {
 
 // WithPayload 设置成功响应的数据负载。
 func (c *context) WithPayload(payload interface{}) {
-	c.ctx.Set(_PayloadName_, payload)
+	c.ctx.Set(pkgtypes.ContextPayloadNameKey, payload)
 }
 
 // GetPayload 获取响应数据负载。
 // 用于响应处理中间件获取数据。
 func (c *context) GetPayload() interface{} {
-	if payload, ok := c.ctx.Get(_PayloadName_); ok {
+	if payload, ok := c.ctx.Get(pkgtypes.ContextPayloadNameKey); ok {
 		return payload
 	}
 	return nil
@@ -328,7 +320,7 @@ func (c *context) Request() *http.Request {
 
 // RawData 返回存储的原始请求体字节。
 func (c *context) RawData() []byte {
-	body, ok := c.ctx.Get(_BodyName_)
+	body, ok := c.ctx.Get(pkgtypes.ContextBodyNameKey)
 	if !ok {
 		return nil
 	}
@@ -364,9 +356,9 @@ func (c *context) URI() string {
 // RequestContext 返回带有 TraceID 的请求上下文，用于分布式追踪。
 // 当客户端关闭连接时，该上下文会被取消。
 func (c *context) RequestContext() stdCtx.Context {
-	var reqContext = new(types.RequestContext)
+	var reqContext = new(pkgtypes.RequestContext)
 	reqContext.WithTraceID(c.TraceID())
-	return types.NewRequestContext(c.ctx.Request.Context(), reqContext)
+	return pkgtypes.NewRequestContext(c.ctx.Request.Context(), reqContext)
 }
 
 // ResponseWriter 返回 Gin 响应写入器，用于直接操作响应。

@@ -122,28 +122,3 @@ func DefaultCORSConfig() *CORSConfig {
 		OptionsPassthrough: true,
 	}
 }
-
-// ProductionCORSConfig 返回生产环境 CORS 配置。
-// 需要明确指定允许的域名列表。
-//
-// 参数:
-//   - allowedOrigins: 允许的域名列表
-//
-// 返回:
-//   - *CORSConfig: 生产环境 CORS 配置
-func ProductionCORSConfig(allowedOrigins []string) *CORSConfig {
-	return &CORSConfig{
-		Enabled:           true,
-		AllowedOrigins:    allowedOrigins,
-		AllowedMethods: []string{
-			nethttp.MethodHead,
-			nethttp.MethodGet,
-			nethttp.MethodPost,
-			nethttp.MethodPut,
-			nethttp.MethodPatch,
-			nethttp.MethodDelete,
-		},
-		AllowCredentials:   true,
-		OptionsPassthrough: true,
-	}
-}

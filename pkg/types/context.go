@@ -4,6 +4,15 @@ package types
 
 import stdCtx "context"
 
+// 内部上下文键，用于存储请求数据。
+const (
+	CoreContextNameKey       = "core_context"        // 存储核心 Context 的键名
+	ContextBodyNameKey       = "context_body"        // 存储原始请求体的键
+	ContextPayloadNameKey    = "context_payload"     // 存储响应数据的键
+	ContextAbortErrorNameKey = "context_abort_error" // 存储中止错误的键
+	ContextValidatorNameKey  = "context_validator"   // 存储验证器实例的键
+)
+
 // requestContextKey 请求上下文键。
 type requestContextKey struct{}
 

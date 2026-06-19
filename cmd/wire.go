@@ -15,7 +15,6 @@ import (
 	"ult/internal/server"
 	"ult/internal/service"
 	pkgapp "ult/pkg/app"
-	"ult/pkg/logger"
 
 	"github.com/google/wire"
 )
@@ -28,11 +27,6 @@ func initApp(conf *config.Config, tools *app.Tools) (*pkgapp.App, func(), error)
 		api.ProviderSet,
 		router.ProviderSet,
 		server.ProviderSet,
-		provideLogger,
 		newApp))
-}
-
-func provideLogger(tools *app.Tools) *logger.Logger {
-	return tools.Logger()
 }
 

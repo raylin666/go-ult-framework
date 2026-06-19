@@ -88,12 +88,12 @@ func NewDb(name string, config autoload.DB, logger *logger.Logger) (Db, error) {
 			break
 		}
 
-		logger.UseApp(context.TODO()).Warn(fmt.Sprintf("db connection %s attempt %d/%d failed: %v, retrying in %d seconds", name, i+1, maxRetries, err, retryDelay))
+		logger.UseApp(context.TODO()).Warn(fmt.Sprintf("数据库连接 %s 尝试 %d/%d 失败：%v，在 %d 秒内重试", name, i+1, maxRetries, err, retryDelay))
 		time.Sleep(time.Duration(retryDelay) * time.Second)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("new db to %s db err after %d retries", name, maxRetries)
+		return nil, fmt.Errorf("创建数据库连接失败：%v，%d次重试后仍失败", err, maxRetries)
 	}
 
 	rdb.client = client

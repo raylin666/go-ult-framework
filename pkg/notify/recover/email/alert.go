@@ -27,7 +27,7 @@ func NotifyHandler(ctx context.Context, config autoload.Notify, logger *logger.L
 	return func(msg *proposal.AlertMessage) {
 		go func() {
 			if config.Recover.Email.Host == "" || config.Recover.Email.Port == 0 || config.Recover.Email.User == "" || config.Recover.Email.Pass == "" || config.Recover.Email.To == "" {
-				logger.UseApp(ctx).Error("email notify config error")
+				logger.UseApp(ctx).Error("发送告警邮件通知邮件配置错误")
 				return
 			}
 
@@ -41,7 +41,7 @@ func NotifyHandler(ctx context.Context, config autoload.Notify, logger *logger.L
 				msg.Timestamp,
 				msg.ErrorStack)
 			if err != nil {
-				logger.UseApp(ctx).Error("email notify template error", zap.Error(err))
+				logger.UseApp(ctx).Error("发送告警邮件通知邮件模板错误", zap.Error(err))
 				return
 			}
 

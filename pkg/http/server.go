@@ -14,6 +14,7 @@ import (
 	pkgmiddleware "ult/pkg/http/middleware"
 	"ult/pkg/logger"
 	"ult/pkg/proposal"
+	pkgtypes "ult/pkg/types"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,7 @@ type HTTPServer struct {
 	config     *config.Config
 	logger     *logger.Logger
 	middleware *pkgmiddleware.Manager // 中间件管理器
+	validator  validator.Validator    // 数据验证器
 }
 
 // NewServer 创建新的 HTTPServer 实例。
@@ -67,6 +69,11 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 
 	// 初始化中间件管理器
 	srv.middleware = pkgmiddleware.NewManager()
+
+	// 初始化数据验证器
+	srv.validator = validator.New(
+		validator.WithLocale(srv.config.Validator.Locale),
+		validator.WithTagname(srv.config.Validator.Tagname))
 
 	// 注册默认中间件
 	srv.registerDefaultMiddlewares()
@@ -235,14 +242,9 @@ func (srv *HTTPServer) UseMiddlewareFunc(name string, priority pkgmiddleware.Pri
 	return srv
 }
 
-// registerRequestHandler 注册请求处理中间件。
+// registerRequestHandler 注册请求处理函数。
 // 初始化 Context、设置验证器、处理响应。
 func (srv *HTTPServer) registerRequestHandler() {
-	// 注册数据验证器
-	var validatorHandler = validator.New(
-		validator.WithLocale(srv.config.Validator.Locale),
-		validator.WithTagname(srv.config.Validator.Tagname))
-
 	// 请求处理中间件
 	srv.engine.Use(func(ctx *gin.Context) {
 		// 拦截 404 请求路由
@@ -257,8 +259,8 @@ func (srv *HTTPServer) registerRequestHandler() {
 		var appCtx = newContext(ctx)
 		defer recoveryContext(appCtx)
 		appCtx.init()
-		appCtx.WithValidator(validatorHandler)
-		ctx.Set(CoreContextNameKey, appCtx)
+		appCtx.WithValidator(srv.validator)
+		ctx.Set(pkgtypes.CoreContextNameKey, appCtx)
 
 		defer func() {
 			// 响应处理
@@ -269,7 +271,7 @@ func (srv *HTTPServer) registerRequestHandler() {
 	})
 }
 
-// handlerResponse 响应处理。
+// handlerResponseHandler 响应处理。
 // 根据请求状态生成成功或错误响应，记录请求日志。
 //
 // 参数:
@@ -286,7 +288,7 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 	)
 
 	// 获取核心上下文 Context
-	appCtx, ok := ctx.Value(CoreContextNameKey).(Context)
+	appCtx, ok := ctx.Value(pkgtypes.CoreContextNameKey).(Context)
 	if !ok || appCtx == nil {
 		return
 	}
