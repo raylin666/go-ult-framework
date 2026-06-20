@@ -13,10 +13,8 @@ import (
 	"ult/pkg/app"
 	pkgmiddleware "ult/pkg/http/middleware"
 	"ult/pkg/logger"
-	"ult/pkg/proposal"
 	pkgtypes "ult/pkg/types"
 
-	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/raylin666/go-utils/v2/http"
 	utilsserver "github.com/raylin666/go-utils/v2/server"
@@ -67,18 +65,21 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 		opt(srv.option)
 	}
 
-	// 初始化中间件管理器
-	srv.middleware = pkgmiddleware.NewManager()
-
 	// 初始化数据验证器
 	srv.validator = validator.New(
 		validator.WithLocale(srv.config.Validator.Locale),
 		validator.WithTagname(srv.config.Validator.Tagname))
 
-	// 注册默认中间件
-	srv.registerDefaultMiddlewares()
+	// 初始化中间件管理器
+	srv.middleware = pkgmiddleware.NewManager()
 
-	// 注册通过 WithMiddleware 添加的自定义中间件
+	// 自动注册 Request 中间件（核心功能，必须启用）
+	// Request 负责 Context 初始化、验证器设置和响应处理
+	// 必须在所有业务中间件之前执行，确保 Context 在中间件中可用
+	// 必须在这里注册, 不能在 NewServer 中注册, 主要是避免循环依赖
+	srv.middleware.Use(srv.CreateRequest())
+
+	// 注册通过 WithMiddleware 添加的中间件
 	for _, m := range srv.option.middlewares {
 		srv.middleware.Use(m)
 	}
@@ -89,20 +90,12 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 		engine.Use(gin.HandlerFunc(handler))
 	}
 
-	// 注册请求处理中间件（初始化 Context、验证器、响应处理）
-	srv.registerRequestHandler()
-
-	// 设置服务器处理器
+	// 设置服务器处理器为当前实例，实现 http.Handler 接口
 	srv.server.Handler = srv
 
 	// 启动服务时自动打开浏览器操作
 	if srv.option.openBrowser != "" {
 		_ = system.OpenBrowser(srv.option.openBrowser)
-	}
-
-	// pprof 性能分析, register pprof to gin. 访问路径: /debug/pprof
-	if srv.option.pprof && !system.NewEnvironment(srv.config.Environment).IsProd() {
-		pprof.Register(srv.engine)
 	}
 
 	return srv
@@ -122,6 +115,12 @@ func (srv *HTTPServer) Logger() *logger.Logger {
 // 这是应用中注册路由的入口点。
 func (srv *HTTPServer) CreateRouterGroup() RouterGroup {
 	return NewRouter(&srv.engine.RouterGroup)
+}
+
+// Engine 返回 Gin 引擎实例。
+// 用于特殊路由注册（如 PProf）。
+func (srv *HTTPServer) Engine() *gin.Engine {
+	return srv.engine
 }
 
 // ServeHTTP 实现 http.Handler 接口。
@@ -188,32 +187,6 @@ func (srv *HTTPServer) Stop(ctx stdCtx.Context) error {
 	return srv.server.Stop(ctx)
 }
 
-// registerDefaultMiddlewares 注册默认中间件。
-// 包括 CORS 和 Recovery 中间件。
-// Request 和 Response 处理逻辑保留在 server.go 中。
-func (srv *HTTPServer) registerDefaultMiddlewares() {
-	// 注册 CORS 中间件
-	if len(srv.option.cors.domains) > 0 {
-		srv.middleware.Use(pkgmiddleware.NewCORS(&pkgmiddleware.CORSConfig{
-			Enabled:            true,
-			AllowedOrigins:     srv.option.cors.domains,
-			AllowCredentials:   true,
-			OptionsPassthrough: true,
-		}))
-	}
-
-	// 注册 Recovery 中间件
-	srv.middleware.Use(pkgmiddleware.NewRecovery(
-		&pkgmiddleware.RecoveryConfig{
-			Enabled:     true,
-			AlertNotify: srv.option.alertNotify,
-			Config:      srv.config,
-			PrintStack:  true,
-		},
-		srv.logger,
-	))
-}
-
 // UseMiddleware 添加自定义中间件。
 // 支持链式调用，可以连续添加多个中间件。
 //
@@ -242,36 +215,35 @@ func (srv *HTTPServer) UseMiddlewareFunc(name string, priority pkgmiddleware.Pri
 	return srv
 }
 
-// registerRequestHandler 注册请求处理函数。
-// 初始化 Context、设置验证器、处理响应。
-func (srv *HTTPServer) registerRequestHandler() {
-	// 请求处理中间件
-	srv.engine.Use(func(ctx *gin.Context) {
-		// 拦截 404 请求路由
-		if ctx.Writer.Status() == nethttp.StatusNotFound {
-			return
-		}
-
-		// 请求时间
-		ts := time.Now()
-
-		// 初始化核心上下文 Context
-		var appCtx = newContext(ctx)
-		defer recoveryContext(appCtx)
+// CreateRequest 创建请求中间件。
+// 该中间件负责 Context 初始化、验证器设置和响应处理。
+//
+// 返回:
+//   - pkgmiddleware.Middleware: Request 中间件实例
+func (srv *HTTPServer) CreateRequest() pkgmiddleware.Middleware {
+	// 创建 Context 初始化函数
+	// 该函数负责创建 Context 并完成初始化（包括调用 init() 方法）
+	contextInitializer := func(ctx *gin.Context) (interface{}, error) {
+		appCtx := newContext(ctx)
 		appCtx.init()
 		appCtx.WithValidator(srv.validator)
-		ctx.Set(pkgtypes.CoreContextNameKey, appCtx)
+		return appCtx, nil
+	}
 
-		defer func() {
-			// 响应处理
-			srv.handlerResponse(ts, ctx)
-		}()
+	// 创建响应处理函数
+	response := func(reqTime time.Time, ctx *gin.Context) {
+		srv.handlerResponse(reqTime, ctx)
+	}
 
-		ctx.Next()
-	})
+	// 创建 Request 中间件
+	return pkgmiddleware.NewDefaultRequest(
+		srv.validator,
+		contextInitializer,
+		response,
+	)
 }
 
-// handlerResponseHandler 响应处理。
+// handlerResponse 响应处理。
 // 根据请求状态生成成功或错误响应，记录请求日志。
 //
 // 参数:
@@ -305,19 +277,8 @@ func (srv *HTTPServer) handlerResponse(reqTime time.Time, ctx *gin.Context) {
 			stackErr = err.StackError()
 			// 设置告警提醒 (如发邮件通知、如钉钉告警)
 			if err.IsAlert() {
-				if notifyHandler := srv.option.alertNotify; notifyHandler != nil {
-					notifyHandler(&proposal.AlertMessage{
-						ProjectName:  srv.config.App.Name,
-						Environment:  srv.config.Environment,
-						TraceID:      traceId,
-						HOST:         appCtx.Host(),
-						URI:          appCtx.URI(),
-						Method:       appCtx.Method(),
-						ErrorMessage: err,
-						ErrorStack:   fmt.Sprintf("%+v", stackErr),
-						Timestamp:    time.Now(),
-					})
-				}
+				// 告警通知通过中间件配置，不在这里处理
+				// 如果需要告警，请在创建服务器时通过 WithMiddleware 添加配置了告警通知的 Recovery 中间件
 			}
 
 			resp = NewErrorResponse(traceId, businessCode, businessMessage, err.Desc())

@@ -1,4 +1,4 @@
-// Package middleware 提供中间件管理系统。
+// Package middleware 提供基于 HTTP 框架的中间件管理系统。
 package middleware
 
 import (
@@ -16,6 +16,7 @@ import (
 	goerror "errors"
 
 	"github.com/gin-gonic/gin"
+	utilsMiddleware "github.com/raylin666/go-utils/v2/middleware"
 	"go.uber.org/zap"
 )
 
@@ -64,8 +65,8 @@ func (r *Recovery) Name() string {
 
 // Priority 返回中间件优先级。
 // Recovery 中间件必须在最前执行，设置为最高优先级。
-func (r *Recovery) Priority() Priority {
-	return PriorityHighest
+func (r *Recovery) Priority() utilsMiddleware.Priority {
+	return utilsMiddleware.PriorityHighest
 }
 
 // Enabled 返回是否启用。
@@ -73,15 +74,21 @@ func (r *Recovery) Enabled() bool {
 	return r.config.Enabled
 }
 
-// Handler 返回中间件处理函数。
+// Handler 返回中间件处理函数（实现 utilsMiddleware.Middleware 接口）。
+func (r *Recovery) Handler() utilsMiddleware.Handler {
+	return r.handler()
+}
+
+// handler 返回中间件处理函数。
 // 捕获 panic 并进行恢复处理。
-func (r *Recovery) Handler() HandlerFunc {
+func (r *Recovery) handler() HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
 				r.handleRecovery(ctx, err)
 			}
 		}()
+		ctx.Next()
 	}
 }
 
@@ -142,4 +149,18 @@ func DefaultRecoveryConfig(cfg *config.Config, alertNotify proposal.NotifyHandle
 		Config:      cfg,
 		PrintStack:  true,
 	}
+}
+
+// NewDefaultRecovery 创建默认 Recovery 中间件。
+// 提供便捷的创建方式，使用默认配置。
+//
+// 参数:
+//   - cfg: 应用配置
+//   - logger: 日志记录器
+//   - alertNotify: 告警通知处理函数（可选）
+//
+// 返回:
+//   - *Recovery: Recovery 中间件实例
+func NewDefaultRecovery(cfg *config.Config, logger *logger.Logger, alertNotify proposal.NotifyHandler) *Recovery {
+	return NewRecovery(DefaultRecoveryConfig(cfg, alertNotify), logger)
 }

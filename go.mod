@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.7.0
-	github.com/raylin666/go-utils/v2 v2.0.0
+	github.com/raylin666/go-utils/v2 v2.1.0
 	github.com/rs/cors/wrapper/gin v0.0.0-20221003140808-fcebdb403f4d
 	go.uber.org/zap v1.27.0
 	gorm.io/gen v0.3.18
@@ -34,7 +34,6 @@ require (
 	github.com/gojek/heimdall/v7 v7.0.2 // indirect
 	github.com/gojek/valkyrie v0.0.0-20180215180059-6aee720afcdf // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
-	github.com/google/subcommands v1.2.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

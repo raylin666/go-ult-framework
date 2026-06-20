@@ -1,11 +1,12 @@
-// Package middleware 提供中间件管理系统。
+// Package middleware 提供基于 HTTP 框架的中间件管理系统。
 package middleware
 
 import (
 	nethttp "net/http"
 
-	cors "github.com/rs/cors/wrapper/gin"
 	"github.com/gin-gonic/gin"
+	utilsMiddleware "github.com/raylin666/go-utils/v2/middleware"
+	cors "github.com/rs/cors/wrapper/gin"
 )
 
 // CORSConfig CORS 中间件配置。
@@ -34,7 +35,8 @@ type CORSConfig struct {
 // CORS CORS 中间件。
 // 处理跨域资源共享（Cross-Origin Resource Sharing）。
 type CORS struct {
-	config *CORSConfig
+	config       *CORSConfig
+	corsHandler  gin.HandlerFunc // 缓存的 CORS 处理器，避免每次请求重新创建
 }
 
 // NewCORS 创建 CORS 中间件实例。
@@ -57,8 +59,21 @@ func NewCORS(config *CORSConfig) *CORS {
 		}
 	}
 
+	// 在初始化时创建 CORS 处理器，避免每次请求重复创建
+	var corsHandler gin.HandlerFunc
+	if len(config.AllowedOrigins) > 0 {
+		corsHandler = cors.New(cors.Options{
+			AllowedOrigins:     config.AllowedOrigins,
+			AllowedMethods:     config.AllowedMethods,
+			AllowedHeaders:     config.AllowedHeaders,
+			AllowCredentials:   config.AllowCredentials,
+			OptionsPassthrough: config.OptionsPassthrough,
+		})
+	}
+
 	return &CORS{
-		config: config,
+		config:       config,
+		corsHandler:  corsHandler,
 	}
 }
 
@@ -69,8 +84,8 @@ func (c *CORS) Name() string {
 
 // Priority 返回中间件优先级。
 // CORS 中间件需要在早期执行，设置为高优先级。
-func (c *CORS) Priority() Priority {
-	return PriorityHigh
+func (c *CORS) Priority() utilsMiddleware.Priority {
+	return utilsMiddleware.PriorityHigh
 }
 
 // Enabled 返回是否启用。
@@ -78,38 +93,35 @@ func (c *CORS) Enabled() bool {
 	return c.config.Enabled
 }
 
-// Handler 返回中间件处理函数。
-// 使用 rs/cors 库实现 CORS 处理。
-func (c *CORS) Handler() HandlerFunc {
+// Handler 返回中间件处理函数（实现 utilsMiddleware.Middleware 接口）。
+func (c *CORS) Handler() utilsMiddleware.Handler {
+	return c.handler()
+}
+
+// handler 返回中间件处理函数。
+// 使用缓存的 CORS 处理器，避免每次请求重复创建。
+func (c *CORS) handler() HandlerFunc {
 	return func(ctx *gin.Context) {
-		// 如果没有配置允许的域名，跳过 CORS 处理
-		if len(c.config.AllowedOrigins) == 0 {
+		// 如果没有配置允许的域名或处理器未创建，跳过 CORS 处理
+		if c.corsHandler == nil {
+			ctx.Next()
 			return
 		}
 
-		// 创建 CORS 处理器
-		corsHandler := cors.New(cors.Options{
-			AllowedOrigins:     c.config.AllowedOrigins,
-			AllowedMethods:     c.config.AllowedMethods,
-			AllowedHeaders:     c.config.AllowedHeaders,
-			AllowCredentials:   c.config.AllowCredentials,
-			OptionsPassthrough: c.config.OptionsPassthrough,
-		})
-
-		// 执行 CORS 处理
-		corsHandler(ctx)
+		// 使用已缓存的 CORS 处理器
+		c.corsHandler(ctx)
 	}
 }
 
 // DefaultCORSConfig 返回默认 CORS 配置。
-// 允许所有域名访问，适用于开发环境。
+// 采用安全配置，默认不允许任何域名，强制用户显式配置。
 //
 // 返回:
 //   - *CORSConfig: 默认 CORS 配置
 func DefaultCORSConfig() *CORSConfig {
 	return &CORSConfig{
-		Enabled:           true,
-		AllowedOrigins:    []string{"*"},
+		Enabled:        true,
+		AllowedOrigins: []string{}, // 默认不允许任何域名，强制用户配置
 		AllowedMethods: []string{
 			nethttp.MethodHead,
 			nethttp.MethodGet,
@@ -118,7 +130,7 @@ func DefaultCORSConfig() *CORSConfig {
 			nethttp.MethodPatch,
 			nethttp.MethodDelete,
 		},
-		AllowCredentials:   true,
-		OptionsPassthrough: true,
+		AllowCredentials:   false,
+		OptionsPassthrough: false,
 	}
 }

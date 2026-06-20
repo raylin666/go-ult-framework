@@ -3,7 +3,6 @@ package http
 
 import (
 	"time"
-	"ult/pkg/proposal"
 
 	pkgmiddleware "ult/pkg/http/middleware"
 )
@@ -13,48 +12,9 @@ type Option func(opt *option)
 
 // option HTTP 服务器内部选项配置。
 type option struct {
-	cors struct {
-		domains []string // CORS 允许的域名列表
-	}
-	pprof       bool                       // 是否启用 pprof 性能分析
-	rate        bool                       // 是否启用限流
 	openBrowser string                     // 启动时自动打开的浏览器 URL
-	alertNotify proposal.NotifyHandler     // 告警通知处理函数
 	timeout     time.Duration              // 优雅关闭超时时间
 	middlewares []pkgmiddleware.Middleware // 自定义中间件列表
-}
-
-// EnableCors 启用 CORS 跨域支持选项。
-//
-// 参数:
-//   - domains: 允许跨域的域名列表
-//
-// 返回:
-//   - Option: 选项函数
-func EnableCors(domains []string) Option {
-	return func(opt *option) {
-		opt.cors.domains = domains
-	}
-}
-
-// EnablePProf 启用 pprof 性能分析选项。
-//
-// 返回:
-//   - Option: 选项函数
-func EnablePProf() Option {
-	return func(opt *option) {
-		opt.pprof = true
-	}
-}
-
-// EnableRate 启用限流选项。
-//
-// 返回:
-//   - Option: 选项函数
-func EnableRate() Option {
-	return func(opt *option) {
-		opt.rate = true
-	}
 }
 
 // EnableOpenBrowser 启动时自动打开浏览器选项。
@@ -67,19 +27,6 @@ func EnableRate() Option {
 func EnableOpenBrowser(uri string) Option {
 	return func(opt *option) {
 		opt.openBrowser = uri
-	}
-}
-
-// EnableAlertNotify 启用告警通知选项。
-//
-// 参数:
-//   - handler: 告警通知处理函数
-//
-// 返回:
-//   - Option: 选项函数
-func EnableAlertNotify(handler proposal.NotifyHandler) Option {
-	return func(opt *option) {
-		opt.alertNotify = handler
 	}
 }
 
