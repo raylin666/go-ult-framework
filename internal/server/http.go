@@ -45,12 +45,6 @@ func NewHTTPServer(
 		OptionsPassthrough: true,
 	})
 
-	// 创建 PProf 中间件
-	pprofMiddleware := pkgmiddleware.NewPProf(&pkgmiddleware.PProfConfig{
-		Enabled:     true,
-		Environment: config.Environment,
-	})
-
 	// 创建 Recovery 中间件（默认启用）
 	recoveryMiddleware := pkgmiddleware.NewDefaultRecovery(config, tool.Logger(), nil)
 
@@ -64,15 +58,14 @@ func NewHTTPServer(
 		},
 		pkghttp.WithMiddleware(
 			recoveryMiddleware,
-			corsMiddleware,
-			pprofMiddleware),
+			corsMiddleware),
 	)
 
 	// 注册路由
 	httpRouter(server)
 
-	// 注册 PProf 路由（特殊处理）
-	pprofMiddleware.RegisterRoutes(server.Engine())
+	// 注册 PProf 性能分析路由（非生产环境自动启用）
+	pkghttp.RegisterPProf(server.Engine(), config.Environment)
 
 	return server
 }

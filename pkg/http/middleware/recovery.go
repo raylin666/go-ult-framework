@@ -109,9 +109,11 @@ func (r *Recovery) handleRecovery(ctx *gin.Context, err interface{}) {
 		zap.String("stack", stack),
 	)
 
-	// 设置错误（使用 gin.Context 的方法）
-	ctx.AbortWithStatus(nethttp.StatusInternalServerError)
+	// 设置错误信息到 Context（先设置错误，再终止请求）
 	ctx.Set(pkgtypes.ContextAbortErrorNameKey, errcode.New(errcode.ServerError).WithStackError(goerror.New("got panic")))
+
+	// 终止请求并设置响应状态码
+	ctx.AbortWithStatus(nethttp.StatusInternalServerError)
 
 	// 发送告警通知
 	if r.config.AlertNotify != nil && r.config.Config != nil {
