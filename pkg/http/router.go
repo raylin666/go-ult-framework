@@ -1,7 +1,10 @@
 // Package http 提供 HTTP 服务器实现，基于 Gin 框架封装。
 package http
 
-import "github.com/gin-gonic/gin"
+import (
+	"ult/pkg/types"
+	"github.com/gin-gonic/gin"
+)
 
 var _ IRouter = (*Router)(nil)
 
@@ -94,13 +97,23 @@ func (r *Router) HEAD(relativePath string, handlers ...HandlerFunc) {
 }
 
 // wrapHandlers 包装处理函数，将自定义 HandlerFunc 转换为 Gin HandlerFunc。
+// 复用 Request 中间件已初始化的 Context，避免重复创建。
 func wrapHandlers(handlers ...HandlerFunc) []gin.HandlerFunc {
 	funcs := make([]gin.HandlerFunc, len(handlers))
 	for i, handler := range handlers {
 		funcs[i] = func(c *gin.Context) {
-			ctx := newContext(c)
-			defer recoveryContext(ctx)
-			handler(ctx)
+			// 尝试从 gin.Context 获取 Request 中间件已初始化的 Context 
+			// 在 CreateRequest 创建请求中间件的 contextInitializer 中初始化了 Context
+			if appCtx, exists := c.Get(types.CoreContextNameKey); exists {
+				// 复用已存在的 Context（Request 中间件已初始化）
+				ctx := appCtx.(Context)
+				handler(ctx)
+			} else {
+				// 如果不存在（例如未使用 Request 中间件），才创建新的
+				ctx := newContext(c)
+				defer recoveryContext(ctx)
+				handler(ctx)
+			}
 		}
 	}
 
