@@ -78,6 +78,12 @@ func (r *Request) Enabled() bool {
 	return r.config.Enabled
 }
 
+// Dependencies 返回中间件依赖列表。
+// Request 中间件依赖 Recovery，确保 Recovery 能捕获 Request 中的 panic。
+func (r *Request) Dependencies() []string {
+	return []string{types.RecoveryMiddlewareName} // 依赖 Recovery 中间件
+}
+
 // Handler 返回中间件处理函数（实现 utilsMiddleware.Middleware 接口）。
 func (r *Request) Handler() utilsMiddleware.Handler {
 	return r.handler()

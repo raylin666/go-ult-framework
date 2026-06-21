@@ -94,6 +94,12 @@ func (c *CORS) Enabled() bool {
 	return c.config.Enabled
 }
 
+// Dependencies 返回中间件依赖列表。
+// CORS 中间件无依赖。
+func (c *CORS) Dependencies() []string {
+	return []string{}
+}
+
 // Handler 返回中间件处理函数（实现 utilsMiddleware.Middleware 接口）。
 func (c *CORS) Handler() utilsMiddleware.Handler {
 	return c.handler()

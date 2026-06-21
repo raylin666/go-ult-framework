@@ -3,6 +3,7 @@ package http
 
 import (
 	"ult/pkg/types"
+
 	"github.com/gin-gonic/gin"
 )
 

@@ -75,6 +75,12 @@ func (r *Recovery) Enabled() bool {
 	return r.config.Enabled
 }
 
+// Dependencies 返回中间件依赖列表。
+// Recovery 中间件无依赖，必须最先执行。
+func (r *Recovery) Dependencies() []string {
+	return []string{}
+}
+
 // Handler 返回中间件处理函数（实现 utilsMiddleware.Middleware 接口）。
 func (r *Recovery) Handler() utilsMiddleware.Handler {
 	return r.handler()
