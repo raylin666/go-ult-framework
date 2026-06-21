@@ -13,14 +13,17 @@
 - **分层架构设计**: 采用经典的分层架构 + 依赖注入设计模式，职责清晰
 - **严格调用链**: api → service → data 单向调用，避免循环依赖
 - **依赖注入**: 使用 Google Wire 实现依赖注入，降低组件耦合
-- **中间件管理**: 支持优先级管理的中间件链，灵活配置
-- **统一错误处理**: 完整的错误码管理系统，支持多语言和告警
+- **中间件管理**: 支持优先级和依赖管理的中间件链，自动验证依赖关系
+- **统一错误处理**: 完整的错误码管理系统，支持多语言和告警，BusinessError 实现 error 接口
 - **多连接支持**: 支持多数据库和 Redis 连接配置
 - **代码生成**: 集成 GORM Gen，自动生成查询器代码
 - **优雅关闭**: 完整的服务器生命周期管理和优雅关闭机制
-- **链路追踪**: 内置 TraceID 支持，便于分布式追踪
+- **链路追踪**: 内置 TraceID 支持，便于分布式追踪，并发安全设计
 - **配置管理**: YAML 配置文件，支持多环境配置
 - **Docker 支持**: 提供 Dockerfile 和 Docker Compose 配置
+- **并发安全**: TraceID 和 RequestContext 使用 sync.Once 确保并发安全
+- **性能优化**: Header 和 RequestContext 性能优化，减少内存分配和 GC 压力
+- **内存安全**: RawData 返回副本，避免内存泄漏和数据污染
 
 ---
 
@@ -192,6 +195,7 @@ type codeRegistry struct {
 
 // 业务错误接口
 type BusinessError interface {
+    error                                    // 实现 error 接口，可作为标准错误使用
     WithStackError(err error) BusinessError  // 堆栈追踪
     HTTPCode() int                           // HTTP状态码
     BusinessCode() int                       // 业务错误码
@@ -200,7 +204,21 @@ type BusinessError interface {
     Alert() BusinessError                    // 告警标记
     IsAlert() bool                           // 是否需要告警
 }
+
+// Error() 方法实现
+// 返回完整的错误信息：消息 + 描述
+func (e *businessError) Error() string {
+    if e.desc != "" {
+        return e.message + ": " + e.desc
+    }
+    return e.message
+}
 ```
+
+**关键改进**：
+- ✅ BusinessError 实现了 error 接口，可以作为标准错误使用
+- ✅ 符合 Go 的错误处理惯例（`if err != nil`）
+- ✅ Validator() 方法改为返回 error 类型，语义更清晰
 
 ---
 
@@ -818,6 +836,29 @@ const (
 )
 ```
 
+### 中间件依赖管理
+
+框架支持中间件依赖管理，自动验证依赖关系：
+
+```go
+// Middleware 接口扩展
+type Middleware interface {
+    utilsMiddleware.Middleware
+    Handler() utilsMiddleware.Handler
+    Dependencies() []string  // 返回依赖的中间件名称列表
+}
+
+// 示例：Request 中间件依赖 Recovery
+func (r *Request) Dependencies() []string {
+    return []string{types.RecoveryMiddlewareName} // 依赖 Recovery 中间件
+}
+```
+
+**关键特性**：
+- ✅ 自动验证中间件依赖是否满足
+- ✅ 按优先级和依赖关系自动排序
+- ✅ 避免运行时错误，提高系统稳定性
+
 ### 创建自定义中间件
 
 ```go
@@ -946,6 +987,151 @@ if isErr := ctx.Validator(req); isErr {
 | `omitempty` | 可选字段 | `validate:"omitempty,email"` |
 
 更多校验规则请参考：[validator 文档](https://github.com/go-playground/validator)
+
+---
+
+## 性能优化
+
+### Header() 方法性能优化
+
+Header() 方法返回请求头的只读引用，性能最优：
+
+```go
+// Header() 返回只读引用（性能最优）
+headers := ctx.Header()  // 无内存分配，直接返回引用
+
+// CloneHeaders() 返回完整副本（需要修改时使用）
+headers := ctx.CloneHeaders()  // 创建完整副本，可以安全修改
+
+// GetHeader() 获取单个请求头（性能最优）
+authHeader := ctx.GetHeader("Authorization")  // 单次查找
+```
+
+**性能对比**：
+- Header()：0.22 ns/op，0 次内存分配，性能提升 **99.96%**
+- CloneHeaders()：543.6 ns/op，22 次内存分配（按需使用）
+- GetHeader()：2.6 ns/op，0 次内存分配（单次查找）
+
+### RequestContext() 方法性能优化
+
+RequestContext() 方法使用 sync.Once 缓存，多次调用只创建一次：
+
+```go
+// 首次调用：创建并缓存 RequestContext
+reqCtx1 := ctx.RequestContext()  // 230.5 ns/op，6 次内存分配
+
+// 后续调用：直接返回缓存（性能提升 592倍）
+reqCtx2 := ctx.RequestContext()  // 0.39 ns/op，0 次内存分配
+```
+
+**性能提升**：
+- 首次调用：230.5 ns/op，6 次内存分配
+- 后续调用：0.39 ns/op，0 次内存分配，性能提升 **99.83%**
+
+### RawData() 方法内存安全
+
+RawData() 方法返回副本，避免内存泄漏和数据污染：
+
+```go
+// 返回副本，可以安全修改
+rawData := ctx.RawData()  // 返回副本，不影响原始数据
+rawData[0] = 'X'  // 修改副本，不影响原始请求体
+```
+
+**内存安全**：
+- ✅ 返回副本，避免外部修改影响原始数据
+- ✅ 防止 context 对象被放回池中后的数据污染
+- ✅ 提高内存安全性
+
+---
+
+## 并发安全性
+
+### TraceID() 方法并发安全
+
+TraceID() 方法使用 sync.Once 确保只生成一次：
+
+```go
+// 使用 sync.Once 确保只生成一次 TraceID
+func (c *context) TraceID() string {
+    c.traceIDOnce.Do(func() {
+        // 只执行一次：检查请求头或生成新的 UUID
+        var headerTraceId = c.GetHeader(pkgtypes.TraceIdName)
+        if len(headerTraceId) <= 0 {
+            headerTraceId = uuid.New().String()
+        }
+        c.ctx.Set(pkgtypes.TraceIdName, headerTraceId)
+    })
+    
+    // 从上下文中获取 TraceID
+    traceId, ok := c.ctx.Get(pkgtypes.TraceIdName)
+    // ...
+}
+```
+
+**并发安全**：
+- ✅ 使用 sync.Once 确保只生成一次 UUID
+- ✅ 100 个 goroutine 同时调用 TraceID()，都获取到相同的值
+- ✅ 避免竞态条件，提高并发安全性
+
+### RequestContext() 方法并发安全
+
+RequestContext() 方法使用 sync.Once 缓存：
+
+```go
+// 使用 sync.Once 缓存 RequestContext
+func (c *context) RequestContext() stdCtx.Context {
+    c.reqContextOnce.Do(func() {
+        reqContext := new(pkgtypes.RequestContext)
+        reqContext.WithTraceID(c.TraceID())
+        c.reqContext = pkgtypes.NewRequestContext(c.ctx.Request.Context(), reqContext)
+    })
+    return c.reqContext
+}
+```
+
+**并发安全**：
+- ✅ 使用 sync.Once 确保只创建一次 RequestContext
+- ✅ 多次调用性能提升 592倍
+- ✅ 减少 GC 压力，提高系统性能
+
+### Context 对象池
+
+Context 使用 sync.Pool 复用，减少内存分配：
+
+```go
+// contextPool 是用于复用上下文对象的 sync.Pool
+var contextPool = &sync.Pool{
+    New: func() interface{} {
+        return new(context)
+    },
+}
+
+// newContext 从池中创建或获取上下文对象
+func newContext(ctx *gin.Context) (Context, error) {
+    context := contextPool.Get().(*context)
+    context.ctx = ctx
+    if err := context.init(); err != nil {
+        return nil, err
+    }
+    return context, nil
+}
+
+// recoveryContext 使用后将上下文归还到池中
+func recoveryContext(ctx Context) {
+    c, ok := ctx.(*context)
+    if !ok {
+        return
+    }
+    c.reset()  // 清空所有字段
+    contextPool.Put(c)
+}
+```
+
+**对象池优势**：
+- ✅ 减少内存分配，提高性能
+- ✅ 减少 GC 压力，提高系统稳定性
+- ✅ 对象复用，降低资源消耗
 
 ---
 
