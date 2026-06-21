@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"ult/pkg/types"
 	pkgtypes "ult/pkg/types"
 
 	"github.com/gin-gonic/gin"
@@ -61,7 +62,7 @@ func NewRequest(config *RequestConfig) *Request {
 
 // Name 返回中间件名称。
 func (r *Request) Name() string {
-	return "request"
+	return types.RequestMiddlewareName
 }
 
 // Priority 返回中间件优先级。

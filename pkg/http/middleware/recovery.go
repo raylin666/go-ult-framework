@@ -11,6 +11,7 @@ import (
 	"ult/errcode"
 	"ult/pkg/logger"
 	"ult/pkg/proposal"
+	"ult/pkg/types"
 	pkgtypes "ult/pkg/types"
 
 	goerror "errors"
@@ -60,7 +61,7 @@ func NewRecovery(config *RecoveryConfig, logger *logger.Logger) *Recovery {
 
 // Name 返回中间件名称。
 func (r *Recovery) Name() string {
-	return "recovery"
+	return types.RecoveryMiddlewareName
 }
 
 // Priority 返回中间件优先级。

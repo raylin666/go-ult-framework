@@ -3,6 +3,7 @@ package middleware
 
 import (
 	nethttp "net/http"
+	"ult/pkg/types"
 
 	"github.com/gin-gonic/gin"
 	utilsMiddleware "github.com/raylin666/go-utils/v2/middleware"
@@ -79,7 +80,7 @@ func NewCORS(config *CORSConfig) *CORS {
 
 // Name 返回中间件名称。
 func (c *CORS) Name() string {
-	return "cors"
+	return types.CorsMiddlewareName
 }
 
 // Priority 返回中间件优先级。

@@ -13,10 +13,12 @@ import (
 	"ult/pkg/app"
 	pkgmiddleware "ult/pkg/http/middleware"
 	"ult/pkg/logger"
+	"ult/pkg/types"
 	pkgtypes "ult/pkg/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/raylin666/go-utils/v2/http"
+	"github.com/raylin666/go-utils/v2/middleware"
 	utilsserver "github.com/raylin666/go-utils/v2/server"
 	"github.com/raylin666/go-utils/v2/server/system"
 	"github.com/raylin666/go-utils/v2/validator"
@@ -54,10 +56,11 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	var srv = &HTTPServer{
-		server: http.NewServer(&nethttp.Server{}, srvOpts...),
-		engine: engine,
-		config: config,
-		logger: log,
+		server:     http.NewServer(&nethttp.Server{}, srvOpts...), // HTTP 服务器实例
+		engine:     engine,                                        // Gin 引擎实例
+		config:     config,                                        // 应用配置
+		logger:     log,                                           // 日志记录器
+		middleware: pkgmiddleware.NewManager(),                    // 初始化中间件管理器
 	}
 
 	srv.option = &option{timeout: 5 * time.Second}
@@ -70,18 +73,15 @@ func NewServer(config *config.Config, log *logger.Logger, srvOpts []http.ServerO
 		validator.WithLocale(srv.config.Validator.Locale),
 		validator.WithTagname(srv.config.Validator.Tagname))
 
-	// 初始化中间件管理器
-	srv.middleware = pkgmiddleware.NewManager()
-
 	// 自动注册 Request 中间件（核心功能，必须启用）
 	// Request 负责 Context 初始化、验证器设置和响应处理
 	// 必须在所有业务中间件之前执行，确保 Context 在中间件中可用
 	// 必须在这里注册, 不能在 NewServer 中注册, 主要是避免循环依赖
-	srv.middleware.Use(srv.CreateRequest())
+	srv.UseMiddleware(srv.CreateRequest())
 
 	// 注册通过 WithMiddleware 添加的中间件
 	for _, m := range srv.option.middlewares {
-		srv.middleware.Use(m)
+		srv.UseMiddleware(m)
 	}
 
 	// 构建中间件链并应用到 Gin 引擎
@@ -196,6 +196,10 @@ func (srv *HTTPServer) Stop(ctx stdCtx.Context) error {
 // 返回:
 //   - *HTTPServer: HTTP 服务器实例（支持链式调用）
 func (srv *HTTPServer) UseMiddleware(m pkgmiddleware.Middleware) *HTTPServer {
+	if m.Priority() == middleware.PriorityHighest && m.Name() != types.RecoveryMiddlewareName {
+		srv.logger.Warn(fmt.Sprintf("最高优先级 PriorityHighest 应用于 Recovery 异常恢复中间件, 当前中间件为 `%s`, 请注意编排顺序, 必须保证 Recovery 为第一位中间件使用", m.Name()))
+	}
+
 	srv.middleware.Use(m)
 	return srv
 }
