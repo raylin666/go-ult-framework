@@ -80,8 +80,14 @@ type Context interface {
 	// 用于响应处理中间件获取数据。
 	GetPayload() interface{}
 
-	// Header 返回请求头的克隆副本。
+	// Header 返回所有请求头的只读引用。
+	// 注意：返回的是原始请求头的引用，不应修改。
+	// 性能优：无内存分配，直接返回引用。
 	Header() http.Header
+	// CloneHeaders 克隆所有请求头，返回完整副本。
+	// 返回的副本可以安全修改而不影响原始请求头。
+	// 性能说明：每次调用都会创建完整的副本，仅在需要修改时使用。
+	CloneHeaders() http.Header
 	// GetHeader 通过键名返回特定的请求头值。
 	GetHeader(key string) string
 	// SetHeader 设置响应头。
@@ -118,15 +124,19 @@ type Context interface {
 // context 是 Context 接口的内部实现。
 // 封装 gin.Context 并存储额外的请求/响应数据。
 type context struct {
-	ctx         *gin.Context
-	traceIDOnce sync.Once // 确保 TraceID 只生成一次
+	ctx            *gin.Context
+	reqContext     stdCtx.Context // 缓存的 RequestContext
+	traceIDOnce    sync.Once      // 确保 TraceID 只生成一次
+	reqContextOnce sync.Once      // 确保 RequestContext 只创建一次
 }
 
 // reset 重置上下文对象，清空所有字段。
 // 在归还到 Pool 前调用，确保下次使用时数据干净。
 func (c *context) reset() {
 	c.ctx = nil
-	c.traceIDOnce = sync.Once{} // 重置 sync.Once 以便下次使用
+	c.reqContext = nil             // 清空缓存的 RequestContext
+	c.traceIDOnce = sync.Once{}    // 重置 sync.Once 以便下次使用
+	c.reqContextOnce = sync.Once{} // 重置 sync.Once 以便下次使用
 }
 
 // init 初始化上下文，读取并存储原始请求体。
@@ -299,9 +309,20 @@ func (c *context) GetPayload() interface{} {
 	return nil
 }
 
-// Header 返回请求头的克隆副本。
-// 该克隆副本可以安全修改而不影响原始请求头。
+
+// Header 返回所有请求头的只读引用。
+// 注意：返回的是原始请求头的引用，不应修改。
+// 性能优：无内存分配，直接返回引用。
+// 如果需要修改请求头，请使用 CloneHeaders() 方法。
 func (c *context) Header() http.Header {
+	return c.ctx.Request.Header
+}
+
+// CloneHeaders 克隆所有请求头，返回完整副本。
+// 返回的副本可以安全修改而不影响原始请求头。
+// 性能说明：每次调用都会创建完整的副本，仅在需要修改时使用。
+// 如果只需要读取请求头，建议使用 Header() 方法。
+func (c *context) CloneHeaders() http.Header {
 	header := c.ctx.Request.Header
 	clone := make(http.Header, len(header))
 	for k, v := range header {
@@ -383,10 +404,14 @@ func (c *context) URI() string {
 
 // RequestContext 返回带有 TraceID 的请求上下文，用于分布式追踪。
 // 当客户端关闭连接时，该上下文会被取消。
+// 使用 sync.Once 缓存 RequestContext，多次调用只创建一次。
 func (c *context) RequestContext() stdCtx.Context {
-	var reqContext = new(pkgtypes.RequestContext)
-	reqContext.WithTraceID(c.TraceID())
-	return pkgtypes.NewRequestContext(c.ctx.Request.Context(), reqContext)
+	c.reqContextOnce.Do(func() {
+		reqContext := new(pkgtypes.RequestContext)
+		reqContext.WithTraceID(c.TraceID())
+		c.reqContext = pkgtypes.NewRequestContext(c.ctx.Request.Context(), reqContext)
+	})
+	return c.reqContext
 }
 
 // ResponseWriter 返回 Gin 响应写入器，用于直接操作响应。

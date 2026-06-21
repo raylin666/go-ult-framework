@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -250,4 +251,209 @@ func TestContextPoolReset(t *testing.T) {
 
 	t.Logf("First TraceID: %s", traceID1)
 	t.Logf("Second TraceID: %s", traceID2)
+}
+
+// ============================================================================
+// 性能基准测试
+// ============================================================================
+
+// BenchmarkHeaderCurrent 测试当前 Header() 方法性能（调用 CloneHeaders）
+func BenchmarkHeaderCurrent(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// 添加 20 个请求头，模拟真实场景
+	for i := 0; i < 20; i++ {
+		req.Header.Set(fmt.Sprintf("X-Header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	w := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = ctx.Header()
+		}
+	})
+}
+
+// BenchmarkGetAllHeaders 测试 GetAllHeaders() 方法性能（只读引用）
+func BenchmarkGetAllHeaders(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// 添加 20 个请求头，模拟真实场景
+	for i := 0; i < 20; i++ {
+		req.Header.Set(fmt.Sprintf("X-Header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	w := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = ctx.Header()
+		}
+	})
+}
+
+// BenchmarkCloneHeaders 测试 CloneHeaders() 方法性能（完整副本）
+func BenchmarkCloneHeaders(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// 添加 20 个请求头，模拟真实场景
+	for i := 0; i < 20; i++ {
+		req.Header.Set(fmt.Sprintf("X-Header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	w := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = ctx.CloneHeaders()
+		}
+	})
+}
+
+// BenchmarkGetHeader 测试 GetHeader() 方法性能（单个请求头）
+func BenchmarkGetHeader(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// 添加 20 个请求头，模拟真实场景
+	for i := 0; i < 20; i++ {
+		req.Header.Set(fmt.Sprintf("X-Header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	w := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = ctx.GetHeader("X-Header-0")
+		}
+	})
+}
+
+// BenchmarkRequestContextCurrent 测试 RequestContext() 方法性能（缓存优化）
+func BenchmarkRequestContextCurrent(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = ctx.RequestContext()
+		}
+	})
+}
+
+// BenchmarkRequestContextMultipleCalls 测试多次调用 RequestContext() 的性能
+func BenchmarkRequestContextMultipleCalls(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ctx, err := newContext(ginCtx)
+		if err != nil {
+			b.Fatalf("newContext() failed: %v", err)
+		}
+
+		// 模拟多次调用（测试缓存效果）
+		for j := 0; j < 10; j++ {
+			_ = ctx.RequestContext()
+		}
+
+		recoveryContext(ctx)
+	}
+}
+
+// BenchmarkHeaderComparison 对比不同方法的性能差异
+func BenchmarkHeaderComparison(b *testing.B) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	// 添加 20 个请求头，模拟真实场景
+	for i := 0; i < 20; i++ {
+		req.Header.Set(fmt.Sprintf("X-Header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	w := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(w)
+	ginCtx.Request = req
+
+	ctx, err := newContext(ginCtx)
+	if err != nil {
+		b.Fatalf("newContext() failed: %v", err)
+	}
+
+	b.Run("Header_Deprecated", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = ctx.Header()
+		}
+	})
+
+	b.Run("GetAllHeaders_Optimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = ctx.Header()
+		}
+	})
+
+	b.Run("CloneHeaders_OnDemand", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = ctx.CloneHeaders()
+		}
+	})
+
+	b.Run("GetHeader_Single", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_ = ctx.GetHeader("X-Header-0")
+		}
+	})
 }
