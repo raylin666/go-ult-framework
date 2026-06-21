@@ -16,28 +16,20 @@ import (
 	"ult/internal/server"
 	"ult/internal/service"
 	app2 "ult/pkg/app"
-	"ult/pkg/logger"
 )
 
 // Injectors from wire.go:
 
 func initApp(conf *config.Config, tools *app.Tools) (*app2.App, func(), error) {
-	logger := provideLogger(tools)
 	dataData, cleanup := data.NewData(conf, tools)
 	dataRepo := data.NewDataRepo(dataData)
 	testRepo := repo.NewTestRepo(dataData)
 	heartbeatService := service.NewHeartbeatService(dataRepo, testRepo, tools)
 	heartbeatInterface := api.NewHeartbeatHandler(heartbeatService, tools)
 	httpRouter := router.NewHTTPRouter(heartbeatInterface)
-	httpServer := server.NewHTTPServer(conf, logger, httpRouter)
-	appApp := newApp(conf, logger, httpServer)
+	httpServer := server.NewHTTPServer(conf, tools, httpRouter)
+	appApp := newApp(conf, tools, httpServer)
 	return appApp, func() {
 		cleanup()
 	}, nil
-}
-
-// wire.go:
-
-func provideLogger(tools *app.Tools) *logger.Logger {
-	return tools.Logger()
 }

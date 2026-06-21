@@ -82,7 +82,7 @@ func NewData(c *config.Config, tools *app.Tools) (Data, func()) {
 				if dbRepo != nil {
 					_ = dbRepo.Close()
 				}
-				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing db: %s", dbName))
+				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("关闭数据库连接: %s", dbName))
 			}
 		}
 		if data.dataRepo.RedisRepo != nil {
@@ -90,7 +90,7 @@ func NewData(c *config.Config, tools *app.Tools) (Data, func()) {
 				if redisRepo != nil {
 					_ = redisRepo.Close()
 				}
-				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("closing redis: %s", redisName))
+				tools.Logger().UseApp(ctx).Info(fmt.Sprintf("关闭 Redis 连接: %s", redisName))
 			}
 		}
 	}

@@ -17,12 +17,13 @@ import (
 
 func newApp(
 	config *config.Config,
-	logger *logger.Logger,
+	tools *app.Tools,
 	hs *http.HTTPServer) *pkgapp.App {
-	appCtx, appCancel := context.WithCancel(context.Background())
+	ctx := context.Background()
+	appCtx, appCancel := context.WithCancel(ctx)
 	return pkgapp.NewApp(
 		config,
-		logger,
+		tools.Logger(),
 		pkgapp.WithAppContext(appCtx),
 		pkgapp.WithAppServer(hs),
 		pkgapp.WithAppCancel(appCancel))
@@ -32,7 +33,7 @@ func main() {
 	// 初始化配置
 	conf, err := config.New()
 	if err != nil {
-		panic(fmt.Sprintf("Config initialization failed: %v", err))
+		panic(fmt.Sprintf("配置初始化失败：%v", err))
 	}
 
 	// 初始化 Environment
@@ -64,13 +65,13 @@ func main() {
 			Compress:   conf.Logger.Compress,
 		})) //	项目访问日志存放文件
 	if err != nil {
-		panic(fmt.Sprintf("Logger initialization failed: %v", err))
+		panic(fmt.Sprintf("日志初始化失败：%v", err))
 	}
 
 	// 初始化 JWT 鉴权认证
 	jwt, err := auth.NewJWT(conf.JWT.App, conf.JWT.Key, conf.JWT.Secret)
 	if err != nil {
-		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("JWT initialization failed: %v", err))
+		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("JWT 初始化失败：%v", err))
 		panic(err)
 	}
 
@@ -80,7 +81,7 @@ func main() {
 	// 初始化应用服务
 	application, cleanup, err := initApp(conf, tools)
 	if err != nil {
-		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("Application initialization failed: %v", err))
+		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("应用初始化失败：%v", err))
 		panic(err)
 	}
 
@@ -92,7 +93,7 @@ func main() {
 
 	// start and wait for stop signal
 	if err := application.Run(); err != nil {
-		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("Application run failed: %v", err))
+		appLogger.UseApp(context.Background()).Error(fmt.Sprintf("应用运行失败：%v", err))
 		panic(err)
 	}
 }

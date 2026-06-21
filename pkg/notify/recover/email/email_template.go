@@ -63,7 +63,7 @@ func newHTMLEmail(service, method, host, uri, id string, msg interface{}, t time
 //   - string: HTML 内容
 //   - error: 渲染错误
 func getEmailHTMLContent(mailTpl string, mailData interface{}) (string, error) {
-	tpl, err := template.New("email notify tpl").Parse(mailTpl)
+	tpl, err := template.New("发送告警邮件通知邮件模板").Parse(mailTpl)
 	if err != nil {
 		return "", err
 	}

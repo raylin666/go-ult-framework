@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"ult/config"
+	"ult/internal/app"
 	"ult/internal/router"
-	pkg_http "ult/pkg/http"
-	"ult/pkg/logger"
+	pkghttp "ult/pkg/http"
+	pkgmiddleware "ult/pkg/http/middleware"
 
 	"github.com/raylin666/go-utils/v2/http"
 )
@@ -23,11 +24,11 @@ import (
 //   - httpRouter: 路由注册函数
 //
 // 返回:
-//   - *pkg_http.HTTPServer: HTTP 服务器实例
+//   - *pkghttp.HTTPServer: HTTP 服务器实例
 func NewHTTPServer(
 	config *config.Config,
-	logger *logger.Logger,
-	httpRouter router.HTTPRouter) *pkg_http.HTTPServer {
+	tool *app.Tools,
+	httpRouter router.HTTPRouter) *pkghttp.HTTPServer {
 	var addr = fmt.Sprintf("%s:%d", config.Server.Http.Host, config.Server.Http.Port)
 	var corsDomains []string
 	if config.Server.Http.Cors.Domains == "all" {
@@ -36,19 +37,35 @@ func NewHTTPServer(
 		corsDomains = strings.Split(config.Server.Http.Cors.Domains, ",")
 	}
 
-	var server = pkg_http.NewServer(
+	// 创建 CORS 中间件
+	corsMiddleware := pkgmiddleware.NewCORS(&pkgmiddleware.CORSConfig{
+		Enabled:            len(corsDomains) > 0,
+		AllowedOrigins:     corsDomains,
+		AllowCredentials:   true,
+		OptionsPassthrough: true,
+	})
+
+	// 创建 Recovery 中间件（默认启用）
+	recoveryMiddleware := pkgmiddleware.NewDefaultRecovery(config, tool.Logger(), nil)
+
+	// 创建服务器
+	var server = pkghttp.NewServer(
 		config,
-		logger,
+		tool.Logger(),
 		[]http.ServerOption{
 			http.WithServerNetwork(config.Server.Http.Network),
 			http.WithServerAddress(addr),
 		},
-		// pkg_http.EnableAlertNotify(email.NotifyHandler(ctx, config.Notify, logger)),
-		pkg_http.EnableCors(corsDomains),
-		pkg_http.EnablePProf())
+		pkghttp.WithMiddleware(
+			recoveryMiddleware,
+			corsMiddleware),
+	)
 
 	// 注册路由
 	httpRouter(server)
+
+	// 注册 PProf 性能分析路由（非生产环境自动启用）
+	pkghttp.RegisterPProf(server.Engine(), config.Environment)
 
 	return server
 }

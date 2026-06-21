@@ -58,16 +58,16 @@ func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 		for dbName, dbConfig := range dbMap {
 			rdb, err := db.NewDb(dbName, dbConfig, logger)
 			if err != nil {
-				logger.UseApp(ctx).Error(fmt.Sprintf("init db.repo %s error", dbName), zap.Error(err))
+				logger.UseApp(ctx).Error(fmt.Sprintf("初始化 Db.repo %s 失败", dbName), zap.Error(err))
 			} else {
-				logger.UseApp(ctx).Info(fmt.Sprintf("init db.repo %s successfully", dbName))
+				logger.UseApp(ctx).Info(fmt.Sprintf("初始化 Db.repo %s 成功", dbName))
 				dbRepo.resource[dbName] = rdb
 			}
 		}
 
 		repo.db = dbRepo
 	} else {
-		logger.UseApp(ctx).Warn("Currently not db.repo connected.")
+		logger.UseApp(ctx).Warn("目前 Db.repo 未配置连接")
 	}
 
 	// 初始化 Redis
@@ -79,16 +79,16 @@ func NewDataRepo(logger *logger.Logger, conf *config.Config) DataRepo {
 		for redisName, redisConfig := range redisMap {
 			redis, err := cache.NewRedis(redisName, redisConfig, logger)
 			if err != nil {
-				logger.UseApp(ctx).Error(fmt.Sprintf("init redis.repo %s error", redisName), zap.Error(err))
+				logger.UseApp(ctx).Error(fmt.Sprintf("初始化 Redis.repo %s 失败", redisName), zap.Error(err))
 			} else {
-				logger.UseApp(ctx).Info(fmt.Sprintf("init redis.repo %s successfully", redisName))
+				logger.UseApp(ctx).Info(fmt.Sprintf("初始化 Redis.repo %s 成功", redisName))
 				redisRepo.resource[redisName] = redis
 			}
 		}
 
 		repo.redis = redisRepo
 	} else {
-		logger.UseApp(ctx).Warn("Currently not redis.repo connected.")
+		logger.UseApp(ctx).Warn("目前 Redis.repo 未配置连接")
 	}
 
 	return repo
