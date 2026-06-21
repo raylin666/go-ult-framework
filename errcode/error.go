@@ -11,7 +11,9 @@ var _ BusinessError = (*businessError)(nil)
 
 // BusinessError 业务错误接口。
 // 定义统一的错误处理规范，包含 HTTP 状态码、业务错误码、消息、描述等。
+// 实现了 error 接口，可以作为标准错误使用。
 type BusinessError interface {
+	error                                   // 实现 error 接口
 	WithStackError(err error) BusinessError // 设置堆栈错误
 	StackError() error                      // 获取堆栈错误
 	BusinessCode() int                      // 获取业务错误码
@@ -98,4 +100,13 @@ func (e *businessError) Alert() BusinessError {
 // IsAlert 判断是否需要告警。
 func (e *businessError) IsAlert() bool {
 	return e.isAlert
+}
+
+// Error 实现 error 接口，返回错误消息。
+// 如果有描述，返回消息 + 描述；否则只返回消息。
+func (e *businessError) Error() string {
+	if e.desc != "" {
+		return e.message + ": " + e.desc
+	}
+	return e.message
 }

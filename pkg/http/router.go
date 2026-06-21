@@ -111,7 +111,12 @@ func wrapHandlers(handlers ...HandlerFunc) []gin.HandlerFunc {
 				handler(ctx)
 			} else {
 				// 如果不存在（例如未使用 Request 中间件），才创建新的
-				ctx := newContext(c)
+				ctx, err := newContext(c)
+				if err != nil {
+					// newContext 已经设置了错误并中止了请求
+					// 这里直接返回，不再执行 handler
+					return
+				}
 				defer recoveryContext(ctx)
 				handler(ctx)
 			}

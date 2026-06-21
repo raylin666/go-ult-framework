@@ -31,8 +31,6 @@ var _ Context = (*context)(nil)
 // - 请求信息访问
 // - 分布式追踪的 TraceID 管理
 type Context interface {
-	init()
-
 	// ShouldBindQuery 反序列化查询字符串参数。
 	// 在结构体字段中使用 `form:"xxx"` 标签（不是 `query`）。
 	ShouldBindQuery(obj interface{}) error
@@ -65,8 +63,8 @@ type Context interface {
 	TraceID() string
 
 	// Validator 使用配置的验证器验证请求结构体。
-	// 如果验证失败（发生错误）则返回 true。
-	Validator(req interface{}) bool
+	// 返回 nil 表示验证成功，返回 error 表示验证失败。
+	Validator(req interface{}) error
 	WithValidator(v validator.Validator)
 
 	// WithAbortError 设置错误以中止请求。
@@ -120,27 +118,31 @@ type Context interface {
 // context 是 Context 接口的内部实现。
 // 封装 gin.Context 并存储额外的请求/响应数据。
 type context struct {
-	ctx *gin.Context
+	ctx         *gin.Context
+	traceIDOnce sync.Once // 确保 TraceID 只生成一次
 }
 
 // reset 重置上下文对象，清空所有字段。
 // 在归还到 Pool 前调用，确保下次使用时数据干净。
 func (c *context) reset() {
 	c.ctx = nil
+	c.traceIDOnce = sync.Once{} // 重置 sync.Once 以便下次使用
 }
 
 // init 初始化上下文，读取并存储原始请求体。
 // 这允许在请求处理过程中多次读取请求体。
-func (c *context) init() {
+// 如果读取请求体失败，返回错误，调用者应该处理这个错误。
+func (c *context) init() error {
 	body, err := c.ctx.GetRawData()
 	if err != nil {
 		c.ctx.AbortWithStatus(http.StatusInternalServerError)
 		c.ctx.Set(pkgtypes.ContextAbortErrorNameKey, errcode.New(errcode.ServerError).WithDesc(err.Error()))
-		return
+		return err
 	}
 
 	c.ctx.Set(pkgtypes.ContextBodyNameKey, body)
 	c.ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	return nil
 }
 
 // ShouldBindQuery 将查询字符串参数绑定到结构体。
@@ -181,52 +183,73 @@ func (c *context) Redirect(code int, location string) {
 // TraceID 返回分布式追踪的 TraceID。
 // 首先检查上下文或请求头中是否存在 TraceID。
 // 如果未找到，则生成新的 UUID 并存储。
+// 使用 sync.Once 确保在并发场景下只生成一次。
 func (c *context) TraceID() string {
-	traceId, ok := c.ctx.Get(pkgtypes.TraceIdName)
-	if ok {
-		if tid, ok := traceId.(string); ok {
-			return tid
+	// 使用 sync.Once 确保只生成一次 TraceID
+	c.traceIDOnce.Do(func() {
+		// 先检查是否已存在
+		if traceId, ok := c.ctx.Get(pkgtypes.TraceIdName); ok {
+			if tid, ok := traceId.(string); ok && len(tid) > 0 {
+				return
+			}
 		}
-	}
 
-	var headerTraceId = c.GetHeader(pkgtypes.TraceIdName)
-	if len(headerTraceId) <= 0 {
-		headerTraceId = uuid.New().String()
-	}
+		// 检查请求头
+		var headerTraceId = c.GetHeader(pkgtypes.TraceIdName)
+		if len(headerTraceId) <= 0 {
+			headerTraceId = uuid.New().String()
+		}
 
-	c.ctx.Set(pkgtypes.TraceIdName, headerTraceId)
-	return headerTraceId
+		c.ctx.Set(pkgtypes.TraceIdName, headerTraceId)
+	})
+
+	// 从上下文中获取 TraceID
+	traceId, ok := c.ctx.Get(pkgtypes.TraceIdName)
+	if !ok {
+		return ""
+	}
+	tid, ok := traceId.(string)
+	if !ok {
+		return ""
+	}
+	return tid
 }
 
 // Validator 执行请求验证：绑定和校验。
-// 如果验证失败返回 true，成功返回 false。
+// 返回 nil 表示验证成功，返回 error 表示验证失败。
 //
 // 该方法：
 // 1. 将表单数据绑定到请求结构体
 // 2. 使用配置的验证器验证结构体
-// 3. 如果验证失败则设置适当的错误
-func (c *context) Validator(req interface{}) (isErr bool) {
+// 3. 如果验证失败则设置适当的错误并返回
+func (c *context) Validator(req interface{}) error {
 	if err := c.ShouldBindForm(req); err != nil {
-		c.WithAbortError(errcode.New(errcode.ParamValidateError).WithStackError(err))
-		return true
+		businessErr := errcode.New(errcode.ParamValidateError).WithStackError(err)
+		c.WithAbortError(businessErr)
+		return businessErr
 	}
 
 	validate, ok := c.ctx.Get(pkgtypes.ContextValidatorNameKey)
 	if !ok {
-		return true
+		businessErr := errcode.New(errcode.ServerError).WithDesc("validator not found")
+		c.WithAbortError(businessErr)
+		return businessErr
 	}
 
 	validatorInst, ok := validate.(validator.Validator)
 	if !ok {
-		c.WithAbortError(errcode.New(errcode.ServerError).WithDesc("validator not found"))
-		return true
-	}
-	if errStr := validatorInst.Validate(req); errStr != nil {
-		c.WithAbortError(errcode.New(errcode.ParamValidateError).WithDesc(errStr.Error()))
-		return true
+		businessErr := errcode.New(errcode.ServerError).WithDesc("validator type assertion failed")
+		c.WithAbortError(businessErr)
+		return businessErr
 	}
 
-	return false
+	if errStr := validatorInst.Validate(req); errStr != nil {
+		businessErr := errcode.New(errcode.ParamValidateError).WithDesc(errStr.Error())
+		c.WithAbortError(businessErr)
+		return businessErr
+	}
+
+	return nil
 }
 
 // WithValidator 设置请求验证的验证器实例。
@@ -318,7 +341,8 @@ func (c *context) Request() *http.Request {
 	return c.ctx.Request
 }
 
-// RawData 返回存储的原始请求体字节。
+// RawData 返回原始请求体字节的副本。
+// 返回副本是为了防止外部修改影响存储在上下文中的原始数据。
 func (c *context) RawData() []byte {
 	body, ok := c.ctx.Get(pkgtypes.ContextBodyNameKey)
 	if !ok {
@@ -329,7 +353,11 @@ func (c *context) RawData() []byte {
 	if !ok {
 		return nil
 	}
-	return bodyBytes
+
+	// 返回副本，避免外部修改影响原始数据
+	copied := make([]byte, len(bodyBytes))
+	copy(copied, bodyBytes)
+	return copied
 }
 
 // Method 返回 HTTP 方法（GET、POST 等）。
@@ -380,12 +408,18 @@ var contextPool = &sync.Pool{
 	},
 }
 
-// newContext 从池中创建或获取上下文对象。
+// newContext 从池中创建或获取上下文对象，并完成初始化。
 // 用额外功能封装 Gin 上下文。
-func newContext(ctx *gin.Context) Context {
+// 如果初始化失败（如读取请求体失败），返回错误。
+func newContext(ctx *gin.Context) (Context, error) {
 	context := contextPool.Get().(*context)
 	context.ctx = ctx
-	return context
+	if err := context.init(); err != nil {
+		// init() 方法已经设置了错误并中止了请求
+		// 这里返回 nil 和错误，调用者应该处理这个错误
+		return nil, err
+	}
+	return context, nil
 }
 
 // recoveryContext 使用后将上下文归还到池中。

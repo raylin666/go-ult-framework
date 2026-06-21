@@ -226,10 +226,14 @@ func (srv *HTTPServer) UseMiddlewareFunc(name string, priority pkgmiddleware.Pri
 //   - pkgmiddleware.Middleware: Request 中间件实例
 func (srv *HTTPServer) CreateRequest() pkgmiddleware.Middleware {
 	// 创建 Context 初始化函数
-	// 该函数负责创建 Context 并完成初始化（包括调用 init() 方法）
+	// 该函数负责创建 Context 并完成初始化
 	contextInitializer := func(ctx *gin.Context) (interface{}, error) {
-		appCtx := newContext(ctx)
-		appCtx.init()
+		appCtx, err := newContext(ctx)
+		if err != nil {
+			// newContext 已经设置了错误并中止了请求
+			// 这里返回 nil 和错误，中间件会根据返回的错误进行相应的处理
+			return nil, err
+		}
 		appCtx.WithValidator(srv.validator)
 		return appCtx, nil
 	}
