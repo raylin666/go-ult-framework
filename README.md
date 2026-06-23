@@ -1,39 +1,99 @@
-# ULT Web API 框架 (基于 GIN)
+<div align="center">
 
-本框架是基于 `GIN` 进行模块化设计的 API 框架，封装了常用的功能，使用简单，致力于进行快速的业务研发，同时增加了更多限制，约束项目组开发成员，规避混乱无序及自由随意的编码。
+# ULT Web API Framework
 
-提供了方便快捷的 `Makefile` 文件 (帮你快速的生成、构建、执行项目内容)。
+**基于 GIN 的模块化 API 框架**
 
-当你所需命令不存在时可添加到此文件中, 实现命令统一管理。这也大大的提高了开发者的开发效率, 让开发者更专注于业务代码。
+[![Go Version](https://img.shields.io/badge/Go-1.23.0+-00ADD8?style=flat&logo=go)](https://golang.org)
+[![Gin Version](https://img.shields.io/badge/Gin-1.11.0-00ADD8?style=flat)](https://github.com/gin-gonic/gin)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/raylin666/go-ult-framework)](https://goreportcard.com/report/github.com/raylin666/go-ult-framework)
 
----
+[English](./README_EN.md) | 简体中文
 
-## 核心特性
-
-- **分层架构设计**: 采用经典的分层架构 + 依赖注入设计模式，职责清晰
-- **严格调用链**: api → service → data 单向调用，避免循环依赖
-- **依赖注入**: 使用 Google Wire 实现依赖注入，降低组件耦合
-- **中间件管理**: 支持优先级和依赖管理的中间件链，自动验证依赖关系（不满足时 panic）
-- **统一错误处理**: 完整的错误码管理系统，支持多语言和告警，BusinessError 实现 error 接口
-- **多连接支持**: 支持多数据库和 Redis 连接配置
-- **代码生成**: 集成 GORM Gen，自动生成查询器代码
-- **优雅关闭**: 完整的服务器生命周期管理和优雅关闭机制
-- **链路追踪**: 内置 TraceID 支持，便于分布式追踪，并发安全设计
-- **配置管理**: YAML 配置文件，支持多环境配置
-- **Docker 支持**: 提供 Dockerfile 和 Docker Compose 配置
-- **并发安全**: TraceID 和 RequestContext 使用 sync.Once 确保并发安全
-- **性能优化**: Header 和 RequestContext 性能优化，减少内存分配和 GC 压力
-- **内存安全**: RawData 返回副本，避免内存泄漏和数据污染
-- **对象池**: Context 使用 sync.Pool 复用，减少内存分配和 GC 压力
-- **告警通知**: Recovery 中间件支持邮件告警，集成 proposal 通知机制
+</div>
 
 ---
 
-## 整体架构设计
+## 📖 简介
+
+ULT Web API Framework 是基于 `GIN` 进行模块化设计的 API 框架，封装了常用的功能，使用简单，致力于进行快速的业务研发。框架增加了更多限制和约束，帮助项目组规避混乱无序及自由随意的编码，提升代码质量和团队协作效率。
+
+提供了方便快捷的 `Makefile` 文件，帮你快速生成、构建、执行项目内容，实现命令统一管理，大大提高开发效率，让开发者更专注于业务代码。
+
+> 💡 **提示**: 当所需命令不存在时可添加到 Makefile 中，实现命令统一管理。
+
+## ✨ 核心特性
+
+<table>
+<tr>
+<td width="50%">
+
+### 🏗️ 架构设计
+- **分层架构**: 经典分层架构 + 依赖注入设计模式
+- **严格调用链**: api → service → data 单向调用
+- **依赖注入**: Google Wire 实现，降低组件耦合
+- **中间件管理**: 支持优先级和依赖管理
+
+</td>
+<td width="50%">
+
+### 🔧 功能特性
+- **统一错误处理**: 完整错误码系统，支持多语言
+- **多连接支持**: 多数据库和 Redis 连接配置
+- **代码生成**: 集成 GORM Gen，自动生成查询器
+- **优雅关闭**: 完整生命周期管理
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🚀 性能优化
+- **并发安全**: TraceID 使用 sync.Once 确保安全
+- **对象池**: Context 使用 sync.Pool 复用
+- **内存安全**: RawData 返回副本，避免泄漏
+- **链路追踪**: 内置 TraceID，便于分布式追踪
+
+</td>
+<td width="50%">
+
+### 🛡️ 安全特性
+- **告警通知**: Recovery 中间件支持邮件告警
+- **配置管理**: YAML 配置，支持多环境
+- **Docker 支持**: 完整的容器化部署方案
+- **性能剖析**: 集成 Pprof 性能分析
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📑 目录
+
+- [整体架构设计](#整体架构设计)
+- [集成组件](#集成组件)
+- [目录结构](#目录结构)
+- [快速开始](#快速开始)
+- [开发规范](#开发规范)
+- [模块开发指南](#模块开发指南)
+- [中间件管理](#中间件管理)
+- [错误码管理](#错误码管理)
+- [性能优化](#性能优化)
+- [常见问题](#常见问题)
+- [贡献指南](#贡献指南)
+
+---
+
+## 🏗️ 整体架构设计
 
 ### 架构概览
 
 本框架采用经典的 **分层架构 + 依赖注入** 设计模式，整体架构清晰合理：
+
+<details>
+<summary>📊 查看架构图</summary>
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -71,29 +131,31 @@
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+</details>
+
 ### 分层职责说明
 
 | 层级 | 目录 | 职责说明 |
-| --- | --- | --- |
-| 入口层 | `cmd/` | 应用启动入口，Wire 依赖注入绑定 |
-| 路由层 | `internal/router/` | HTTP 路由注册，将 API 处理器绑定到路由路径 |
-| 处理层 | `internal/api/` | HTTP 请求处理，数据校验和响应，调用服务层 |
-| 逻辑层 | `internal/service/` | 业务逻辑处理，调用数据层获取数据 |
-| 数据层 | `internal/data/` | 数据仓库实例管理，数据库/缓存/RPC 操作 |
-| 服务器层 | `internal/server/` | HTTP 服务器创建和配置 |
-| 工具层 | `internal/app/` | 公共工具包（日志、日期时间、环境、JWT 等） |
-| HTTP封装 | `pkg/http/` | Gin 框架封装，Context、Handler、Response、中间件管理 |
-| 中间件 | `pkg/http/middleware/` | Recovery、CORS、Request 中间件及中间件管理器 |
-| 数据库 | `pkg/db/` | GORM 数据库连接封装，支持连接重试 |
-| 缓存 | `pkg/cache/` | Redis 连接封装，支持连接重试 |
-| 日志 | `pkg/logger/` | Zap 日志封装，支持文件轮转和请求/SQL 日志 |
-| 应用管理 | `pkg/app/` | 应用生命周期管理，服务器接口定义 |
-| 类型定义 | `pkg/types/` | 上下文类型、链路追踪类型、中间件常量 |
-| 告警提案 | `pkg/proposal/` | 告警消息定义和通知处理器类型 |
-| 告警通知 | `pkg/notify/` | 异常恢复告警通知（邮件等） |
-| 配置 | `config/` | YAML 配置文件加载和解析 |
-| 错误码 | `errcode/` | 统一错误码定义和管理，支持多语言 |
-| 数据仓库 | `pkg/repositories/` | 数据仓库抽象层，管理多连接 |
+| :---: | :--- | :--- |
+| 🎯 **入口层** | `cmd/` | 应用启动入口，Wire 依赖注入绑定 |
+| 🛣️ **路由层** | `internal/router/` | HTTP 路由注册，将 API 处理器绑定到路由路径 |
+| 📡 **处理层** | `internal/api/` | HTTP 请求处理，数据校验和响应，调用服务层 |
+| 💡 **逻辑层** | `internal/service/` | 业务逻辑处理，调用数据层获取数据 |
+| 💾 **数据层** | `internal/data/` | 数据仓库实例管理，数据库/缓存/RPC 操作 |
+| 🖥️ **服务器层** | `internal/server/` | HTTP 服务器创建和配置 |
+| 🔧 **工具层** | `internal/app/` | 公共工具包（日志、日期时间、环境、JWT 等） |
+| 🌐 **HTTP封装** | `pkg/http/` | Gin 框架封装，Context、Handler、Response、中间件管理 |
+| 🛡️ **中间件** | `pkg/http/middleware/` | Recovery、CORS、Request 中间件及中间件管理器 |
+| 🗄️ **数据库** | `pkg/db/` | GORM 数据库连接封装，支持连接重试 |
+| 📦 **缓存** | `pkg/cache/` | Redis 连接封装，支持连接重试 |
+| 📝 **日志** | `pkg/logger/` | Zap 日志封装，支持文件轮转和请求/SQL 日志 |
+| ⚙️ **应用管理** | `pkg/app/` | 应用生命周期管理，服务器接口定义 |
+| 📋 **类型定义** | `pkg/types/` | 上下文类型、链路追踪类型、中间件常量 |
+| 🔔 **告警提案** | `pkg/proposal/` | 告警消息定义和通知处理器类型 |
+| 📧 **告警通知** | `pkg/notify/` | 异常恢复告警通知（邮件等） |
+| ⚙️ **配置** | `config/` | YAML 配置文件加载和解析 |
+| 🔢 **错误码** | `errcode/` | 统一错误码定义和管理，支持多语言 |
+| 🏪 **数据仓库** | `pkg/repositories/` | 数据仓库抽象层，管理多连接 |
 
 ### 调用链设计
 
@@ -106,16 +168,19 @@
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-**核心原则：**
-- 单向依赖，避免循环调用
-- 职责分离清晰，便于维护和测试
-- `api` 层只做数据校验和响应
-- `service` 层专注业务逻辑
-- `data` 层处理数据操作
+> ⚠️ **核心原则**
+> - 单向依赖，避免循环调用
+> - 职责分离清晰，便于维护和测试
+> - `api` 层只做数据校验和响应
+> - `service` 层专注业务逻辑
+> - `data` 层处理数据操作
 
 ### 依赖注入设计
 
 采用 Google Wire 实现依赖注入，降低组件耦合：
+
+<details>
+<summary>🔧 查看 Wire 配置示例</summary>
 
 ```go
 // cmd/wire.go
@@ -152,9 +217,13 @@ func initApp(conf *config.Config, tools *app.Tools) (*pkgapp.App, func(), error)
 
 各模块通过 `ProviderSet` 注册依赖，Wire 自动生成依赖注入代码。注意实际使用 `panic(wire.Build(...))` 模式，这是 Wire 的标准用法。
 
-Wire 自动生成的依赖链（`cmd/wire_gen.go`）：
+</details>
+
+<details>
+<summary>📝 查看 Wire 自动生成的依赖链</summary>
 
 ```go
+// cmd/wire_gen.go (Wire 自动生成)
 func initApp(conf *config.Config, tools *app.Tools) (*app2.App, func(), error) {
     dataData, cleanup := data.NewData(conf, tools)
     dataRepo := data.NewDataRepo(dataData)
@@ -168,7 +237,12 @@ func initApp(conf *config.Config, tools *app.Tools) (*app2.App, func(), error) {
 }
 ```
 
+</details>
+
 ### 数据流设计
+
+<details>
+<summary>📊 查看数据流图</summary>
 
 ```
 HTTP Request
@@ -239,9 +313,14 @@ HTTP Request
 HTTP Response
 ```
 
+</details>
+
 ### 错误处理设计
 
 统一的错误处理机制：
+
+<details>
+<summary>🔧 查看错误处理接口定义</summary>
 
 ```go
 // 错误码注册表
@@ -276,13 +355,16 @@ func (e *businessError) Error() string {
 }
 ```
 
-**关键改进**：
-- ✅ BusinessError 实现了 error 接口，可以作为标准错误使用
-- ✅ 符合 Go 的错误处理惯例（`if err != nil`）
-- ✅ Validator() 方法返回 error 类型，语义更清晰
-- ✅ WithStackError() 同时设置描述为 err.Error()，确保堆栈错误有描述信息
+</details>
 
-**错误码使用方式**：
+> ✅ **关键改进**
+> - BusinessError 实现了 error 接口，可以作为标准错误使用
+> - 符合 Go 的错误处理惯例（`if err != nil`）
+> - Validator() 方法返回 error 类型，语义更清晰
+> - WithStackError() 同时设置描述为 err.Error()，确保堆栈错误有描述信息
+
+<details>
+<summary>📝 查看错误码使用方式</summary>
 
 错误码常量是 `int` 类型，需要通过 `errcode.New()` 创建 BusinessError 实例，或使用 `vars.go` 中预创建的 `Err*` 变量：
 
@@ -302,28 +384,33 @@ errcode.ErrServerError.WithStackError(err)
 errcode.ErrServerError.Alert()
 ```
 
+</details>
+
 ---
 
-## 集成组件
+## 📦 集成组件
 
 | 名称 | 描述 | 版本 |
-| --- | --- | --- |
-| Gin | HTTP Web 框架 | 1.11.0 |
-| GORM | ORM 数据库组件 | 1.31.1 |
-| Wire | 依赖注入 | 0.7.0 |
-| Zap | 结构化日志 | 1.27.0 |
-| go-redis | Redis 客户端 | 9.0.5 |
-| JWT | JWT 认证 | 5.3.1 |
-| Validator | 数据校验 | 10.27.0 |
-| CORS | 跨域处理 | - |
-| Pprof | 性能剖析 | 1.4.0 |
-| UUID | 唯一标识生成 | 1.6.0 |
-| YAML | 配置文件解析 | 3.0.1 |
-| go-utils | 工具库（Server/Middleware/Auth/Validator/Logger/Mail 等） | v2 |
+| :---: | :--- | :---: |
+| **Gin** | HTTP Web 框架 | [1.11.0](https://github.com/gin-gonic/gin) |
+| **GORM** | ORM 数据库组件 | [1.31.1](https://gorm.io) |
+| **Wire** | 依赖注入 | [0.7.0](https://github.com/google/wire) |
+| **Zap** | 结构化日志 | [1.27.0](https://github.com/uber-go/zap) |
+| **go-redis** | Redis 客户端 | [9.0.5](https://github.com/go-redis/redis) |
+| **JWT** | JWT 认证 | [5.3.1](https://github.com/golang-jwt/jwt) |
+| **Validator** | 数据校验 | [10.27.0](https://github.com/go-playground/validator) |
+| **CORS** | 跨域处理 | - |
+| **Pprof** | 性能剖析 | [1.4.0](https://golang.org/pkg/net/http/pprof) |
+| **UUID** | 唯一标识生成 | [1.6.0](https://github.com/google/uuid) |
+| **YAML** | 配置文件解析 | [3.0.1](https://github.com/go-yaml/yaml) |
+| **go-utils** | 工具库 | v2 |
 
 ---
 
-## 目录结构
+## 📂 目录结构
+
+<details>
+<summary>📁 查看完整目录结构</summary>
 
 ```
 go-ult-framework/
@@ -364,13 +451,83 @@ go-ult-framework/
 │   │   └── wire.go         # Wire ProviderSet
 │   ├── app/                # 应用工具包
 │   │   ├── tools.go        # 公共工具实例（Logger/Datetime/Environment/JWT）
-│   │   └── logo.go         # 启动信息打印
+│   │   └ logo.go           # 启动信息打印
 │   ├── data/               # 数据层
 │   │   ├── data.go         # 数据仓库管理（Data 接口、DataRepo）
 │   │   ├── model/          # 数据模型
 │   │   │   ├── model.go    # 基础模型
-│   │   │   └── test.go     # 测试模型
+│   │   │   └ test.go       # 测试模型
 │   │   ├── repo/           # 数据仓库实现
+│   │   │   ├── test.go     # 测试仓库
+│   │   │   └ wire.go       # Wire ProviderSet
+│   │   ├── redis/          # Redis 操作封装
+│   │   │   ├── client.go   # Redis 客户端
+│   │   │   └ action/       # Redis 操作
+│   │   │       └ lock.go   # 分布式锁
+│   │   └ dbquery/          # GORM Gen 查询器（自动生成）
+│   │       ├── gen.go      # 生成器代码
+│   │       └ api_test.gen.go # 测试查询器
+│   ├── router/             # 路由层
+│   │   ├── router.go       # 路由注册
+│   │   └ heartbeat.go      # 健康检查路由
+│   ├── server/             # 服务器层
+│   │   ├── http.go         # HTTP 服务器创建
+│   │   └ server.go         # Wire ProviderSet
+│   └ service/              # 服务层
+│       ├── heartbeat.go    # 健康检查服务
+│       └ wire.go           # Wire ProviderSet
+├── pkg/                    # 通用封装层（可外部引用）
+│   ├── app/                # 应用管理
+│   │   ├── app.go          # 应用生命周期管理、上下文函数
+│   │   └ server.go         # 服务器接口定义、ServerAgreement
+│   ├── http/               # HTTP 封装
+│   │   ├── server.go       # Gin 服务器封装（UseMiddleware、CreateRequest）
+│   │   ├── context.go      # 请求上下文封装（对象池、sync.Once）
+│   │   ├── router.go       # 路由组封装
+│   │   ├── response.go     # 响应处理（SuccessResponse、ErrorResponse）
+│   │   ├── option.go       # 服务器选项（Timeout、Middleware、OpenBrowser）
+│   │   ├── pprof.go        # PProf 注册（非生产环境）
+│   │   └ middleware/       # 中间件管理
+│   │       ├── adapter.go  # 中间件管理器（Manager，依赖验证）
+│   │       ├── handler.go  # 中间件接口、函数式中间件、Priority 类型别名
+│   │       ├── request.go  # Request 中间件（Context 初始化、响应处理）
+│   │       ├── cors.go     # CORS 中间件
+│   │       └ recovery.go   # Recovery 中间件（异常恢复、告警通知）
+│   ├── db/                 # 数据库封装
+│   │   ├── gorm.go         # GORM 连接封装（重试机制、Ping）
+│   │   └ logger.go         # 数据库日志（TraceID 集成）
+│   ├── cache/              # 缓存封装
+│   │   └ redis.go          # Redis 连接封装（重试机制）
+│   ├── logger/             # 日志封装
+│   │   └ logger.go         # Zap 日志封装（App/SQL/Request 分类日志）
+│   ├── repositories/       # 数据仓库封装
+│   │   ├── repo.go         # 数据仓库接口（DataRepo）
+│   │   ├── db.go           # 数据库仓库接口（DbRepo）
+│   │   └ redis.go          # Redis 仓库接口（RedisRepo）
+│   ├── types/              # 类型定义
+│   │   ├── context.go      # 请求上下文类型、ContextKey 常量
+│   │   ├── trace.go        # 链路追踪类型（TraceIdName）
+│   │   └ middleware.go      # 中间件名称常量
+│   ├── proposal/            # 告警提案
+│   │   ├── alert.go        # 告警消息定义（AlertMessage）、NotifyHandler 类型
+│   └ notify/               # 告警通知
+│   │   └ recover/          # 异常恢复通知
+│   │       └ email/        # 邮件通知
+│   │           ├── alert.go # 告警处理（异步邮件发送）
+│   │           └ email_template.go # 邮件模板（HTML）
+├── static/                 # 静态文件
+│   └ db/                   # 数据库脚本
+│       └ ult.sql           # SQL 初始化脚本
+├── .env.example.yml        # 配置示例
+├── .gitignore              # Git 忽略文件
+├── Dockerfile              # Docker 构建文件
+├── docker-compose.yml      # Docker Compose 配置
+├── Makefile                # 构建命令
+├── go.mod                  # Go 模块定义
+└── go.sum                  # Go 模块依赖
+```
+
+</details>
 │   │   │   ├── test.go     # 测试仓库
 │   │   │   └── wire.go     # Wire ProviderSet
 │   │   ├── redis/          # Redis 操作封装
@@ -442,16 +599,16 @@ go-ult-framework/
 
 ---
 
-## 快速开始
+## 🚀 快速开始
 
-### 1. 下载仓库
+### 1️⃣ 下载仓库
 
 ```bash
 git clone git@github.com:raylin666/go-ult-framework.git
 cd go-ult-framework
 ```
 
-### 2. 初始化项目
+### 2️⃣ 初始化项目
 
 ```bash
 make init
@@ -459,7 +616,7 @@ make init
 
 此命令会创建 `.env.yml` 配置文件（从 `.env.example.yml` 复制）。
 
-### 3. 配置数据库和 Redis
+### 3️⃣ 配置数据库和 Redis
 
 编辑 `.env.yml` 文件，配置数据库和 Redis 连接：
 
@@ -494,9 +651,9 @@ redis:
     retry_delay: 2
 ```
 
-> **注意**: 配置文件具体请参考 `.env.example.yml` 获取完整配置项。
+> 💡 **提示**: 配置文件具体请参考 `.env.example.yml` 获取完整配置项。
 
-### 4. 下载依赖并生成 Wire 代码
+### 4️⃣ 下载依赖并生成 Wire 代码
 
 ```bash
 make generate
@@ -507,7 +664,7 @@ make generate
 - 安装 Wire 工具
 - 生成依赖注入代码
 
-### 5. 启动服务
+### 5️⃣ 启动服务
 
 ```bash
 make run
@@ -535,7 +692,7 @@ curl 127.0.0.1:10001/heartbeat/state
 }
 ```
 
-### 6. 编译执行文件
+### 6️⃣ 编译执行文件
 
 ```bash
 make build
@@ -547,7 +704,7 @@ make build
 ./bin/server
 ```
 
-### Docker 部署
+### 🐳 Docker 部署
 
 支持使用 Docker 和 Docker Compose 部署：
 
@@ -559,14 +716,14 @@ docker build -t go-ult-framework .
 docker-compose up -d
 ```
 
-> **注意**: 当前 Dockerfile 基础镜像不可用，请建议根据实际需求更换镜像和修改 Dockerfile 配置。
+> ⚠️ **注意**: 当前 Dockerfile 基础镜像不可用，请建议根据实际需求更换镜像和修改 Dockerfile 配置。
 
 ---
 
-## Makefile 命令说明
+## 📋 Makefile 命令说明
 
 | 命令 | 说明 |
-| --- | --- |
+| :---: | :--- |
 | `make init` | 初始化项目，创建配置文件 |
 | `make generate` | 下载依赖并生成 Wire 代码 |
 | `make wire` | 生成依赖注入文件 |
@@ -577,7 +734,7 @@ docker-compose up -d
 
 ---
 
-## 开发规范
+## 📐 开发规范
 
 ### 调用链规范
 
@@ -587,16 +744,16 @@ docker-compose up -d
 api (处理层) → service (逻辑层) → data (数据层)
 ```
 
-**核心原则：**
-- `api` 层只做数据校验和响应，不处理业务逻辑
-- `service` 层专注业务逻辑，不直接操作数据库
-- `data` 层处理数据操作，不包含业务判断
-- 逻辑代码只能下沉，禁止反向调用或互调
+> ⚠️ **核心原则**
+> - `api` 层只做数据校验和响应，不处理业务逻辑
+> - `service` 层专注业务逻辑，不直接操作数据库
+> - `data` 层处理数据操作，不包含业务判断
+> - 逻辑代码只能下沉，禁止反向调用或互调
 
 ### 层级职责规范
 
 | 层级 | 允许使用 | 禁止使用 |
-| --- | --- | --- |
+| :---: | :--- | :--- |
 | `api` | `service`、`logger`、`validator` | `config`、`dataRepo`、直接数据库操作 |
 | `service` | `data`、`logger`、其他 `service` | `config`、直接数据库操作 |
 | `data` | `db`、`redis`、`logger` | `service`、`api` |
@@ -606,6 +763,9 @@ api (处理层) → service (逻辑层) → data (数据层)
 1. **统一错误类型**：所有业务错误必须返回 `BusinessError` 类型
 2. **错误码使用**：使用 `errcode.New(code)` 或 `errcode.Err*` 预创建变量，不要直接对 int 常量调用方法
 3. **错误响应**：只能在 `api` 层处理错误响应
+
+<details>
+<summary>📝 查看错误处理示例</summary>
 
 ```go
 // 正确示例 - 使用 errcode.New() 从错误码常量创建
@@ -624,27 +784,30 @@ func (s *AccountService) GetByID(ctx context.Context, id int) (*model.Account, e
 return nil, errcode.ErrDataSelectError.WithDesc(err.Error())
 ```
 
+</details>
+
 ### 数据响应规范
 
 | 方法 | 说明 | 使用场景 |
-| --- | --- | --- |
+| :---: | :--- | :--- |
 | `ctx.WithPayload(data)` | 设置成功响应数据 | 业务处理成功 |
 | `ctx.WithAbortError(err)` | 设置 BusinessError 并中断请求 | 业务处理失败 |
 
-**注意事项：**
-- `WithAbortError` 接受 `errcode.BusinessError` 参数，会自动设置 HTTP 状态码并 `AbortWithStatus`
-- `WithAbortError` 后必须 `return`，否则会继续执行
-- `WithPayload` 一般放在最后，否则需 `return`
+> ⚠️ **注意事项**
+> - `WithAbortError` 接受 `errcode.BusinessError` 参数，会自动设置 HTTP 状态码并 `AbortWithStatus`
+> - `WithAbortError` 后必须 `return`，否则会继续执行
+> - `WithPayload` 一般放在最后，否则需 `return`
 
 ---
 
-## 模块开发指南
+## 🔨 模块开发指南
 
 ### 创建新模块
 
 以创建 `account` 模块为例：
 
-#### 步骤 1：创建数据模型
+<details>
+<summary>📝 步骤 1：创建数据模型</summary>
 
 在 `internal/data/model/` 目录创建模型文件：
 
@@ -669,7 +832,10 @@ func (Account) TableName() string {
 }
 ```
 
-#### 步骤 2：生成查询器代码
+</details>
+
+<details>
+<summary>📝 步骤 2：生成查询器代码</summary>
 
 1. 在 `generate/gormgen/db/default.go` 中注册模型：
 
@@ -694,7 +860,10 @@ g.ApplyBasic(
 make gormgen
 ```
 
-#### 步骤 3：创建数据仓库
+</details>
+
+<details>
+<summary>📝 步骤 3：创建数据仓库</summary>
 
 在 `internal/data/repo/` 目录创建仓库实现：
 
@@ -745,7 +914,10 @@ func (r *accountRepo) query(ctx context.Context) dbquery.IAccountDo {
 }
 ```
 
-#### 步骤 4：创建服务层
+</details>
+
+<details>
+<summary>📝 步骤 4：创建服务层</summary>
 
 在 `internal/service/` 目录创建 `account.go`：
 
@@ -790,7 +962,10 @@ func (s *AccountService) GetByID(ctx context.Context, id int) (*AccountResponse,
 }
 ```
 
-#### 步骤 5：创建 API 处理器
+</details>
+
+<details>
+<summary>📝 步骤 5：创建 API 处理器</summary>
 
 在 `internal/api/` 目录创建 `account.go`：
 
@@ -846,7 +1021,10 @@ func (h *AccountHandler) GetByID() http.HandlerFunc {
 }
 ```
 
-#### 步骤 6：注册路由
+</details>
+
+<details>
+<summary>📝 步骤 6：注册路由</summary>
 
 在 `internal/router/router.go` 中添加：
 
@@ -886,7 +1064,10 @@ func (r *httpRouter) account(group http.RouterGroup) {
 }
 ```
 
-#### 步骤 7：注册 Wire ProviderSet
+</details>
+
+<details>
+<summary>📝 步骤 7：注册 Wire ProviderSet</summary>
 
 在对应的 `wire.go` 文件中添加 ProviderSet：
 
@@ -901,34 +1082,36 @@ var ProviderSet = wire.NewSet(NewAccountService)
 var ProviderSet = wire.NewSet(NewAccountRepo)
 ```
 
-#### 步骤 8：重新生成 Wire 代码
+</details>
+
+<details>
+<summary>📝 步骤 8：重新生成 Wire 代码</summary>
 
 ```bash
 make wire
 ```
 
+</details>
+
 ---
 
-## 中间件管理
+## 🛡️ 中间件管理
 
 ### 框架内置中间件
 
 框架内置三个核心中间件，按优先级自动排序：
 
 | 中间件 | 名称 | 优先级 | 依赖 | 说明 |
-| --- | --- | --- | --- | --- |
-| Recovery | `"recovery"` | PriorityHighest (0) | 无 | 异常恢复、告警通知 |
-| Request | `"request"` | PriorityHigh (1) | Recovery | Context 初始化、验证器设置、响应处理 |
-| CORS | `"cors"` | PriorityHigh (1) | 无 | 跨域处理 |
+| :---: | :---: | :---: | :---: | :--- |
+| **Recovery** | `"recovery"` | PriorityHighest (0) | 无 | 异常恢复、告警通知 |
+| **Request** | `"request"` | PriorityHigh (1) | Recovery | Context 初始化、验证器设置、响应处理 |
+| **CORS** | `"cors"` | PriorityHigh (1) | 无 | 跨域处理 |
 
 ### 中间件优先级
 
-框架使用 `go-utils/v2/middleware` 包的优先级定义，通过类型别名引入：
+框架使用 `go-utils/v2/middleware` 包的优先级定义：
 
 ```go
-// pkg/http/middleware/handler.go
-type Priority = utilsMiddleware.Priority
-
 // 优先级值（来自 go-utils/v2/middleware）
 const (
     PriorityHighest Priority = iota  // 最高优先级（异常恢复）
@@ -938,7 +1121,8 @@ const (
 )
 ```
 
-### Recovery 中间件
+<details>
+<summary>🔧 查看 Recovery 中间件配置</summary>
 
 捕获 panic 异常，记录堆栈日志，支持邮件告警通知：
 
@@ -961,7 +1145,10 @@ Recovery 中间件在捕获 panic 时：
 3. 设置 HTTP 500 状态码并中止请求
 4. 如果配置了 AlertNotify，发送告警通知
 
-### Request 中间件
+</details>
+
+<details>
+<summary>🔧 查看 Request 中间件配置</summary>
 
 Request 中间件是核心中间件，负责 Context 初始化和响应处理：
 
@@ -991,7 +1178,10 @@ Request 中间件功能：
 
 服务器自动创建 Request 中间件（`srv.CreateRequest()`），无需手动注册。
 
-### CORS 中间件
+</details>
+
+<details>
+<summary>🔧 查看 CORS 中间件配置</summary>
 
 ```go
 // 配置
@@ -1008,9 +1198,19 @@ type CORSConfig struct {
 corsConfig := middleware.DefaultCORSConfig()
 ```
 
+</details>
+
 ### 中间件依赖管理
 
 框架支持中间件依赖管理，自动验证依赖关系：
+
+> ✅ **关键特性**
+> - 自动验证中间件依赖是否满足（**不满足时 panic**，确保编译期发现错误）
+> - 按优先级和依赖关系自动排序
+> - 避免运行时错误，提高系统稳定性
+
+<details>
+<summary>📝 查看中间件依赖管理示例</summary>
 
 ```go
 // Middleware 接口
@@ -1026,14 +1226,14 @@ func (r *Request) Dependencies() []string {
 }
 ```
 
-**关键特性**：
-- ✅ 自动验证中间件依赖是否满足（**不满足时 panic**，确保编译期发现错误）
-- ✅ 按优先级和依赖关系自动排序
-- ✅ 避免运行时错误，提高系统稳定性
+</details>
 
 ### Middleware Manager
 
 中间件管理器负责注册、排序和构建中间件链：
+
+<details>
+<summary>📝 查看 Middleware Manager 使用示例</summary>
 
 ```go
 manager := middleware.NewManager()
@@ -1044,7 +1244,12 @@ manager.UseFunc("auth", PriorityLow, authHandler) // 注册函数式中间件
 handlers := manager.Build() // 验证依赖 + 构建中间件链
 ```
 
+</details>
+
 ### 创建自定义中间件
+
+<details>
+<summary>📝 查看自定义中间件示例</summary>
 
 ```go
 // 定义中间件结构体
@@ -1085,7 +1290,12 @@ func (m *AuthMiddleware) Dependencies() []string {
 srv.UseMiddleware(&AuthMiddleware{config: authConfig})
 ```
 
+</details>
+
 ### 使用函数式中间件
+
+<details>
+<summary>📝 查看函数式中间件示例</summary>
 
 ```go
 // 无依赖的函数式中间件
@@ -1107,23 +1317,25 @@ middleware.NewMiddlewareFuncWithDependencies(
 )
 ```
 
+</details>
+
 ---
 
-## 错误码管理
+## 🔢 错误码管理
 
 ### 错误码分类
 
 | 范围 | 分类 | 说明 |
-| --- | --- | --- |
-| 100xxx | 服务端错误 | 内部服务器错误 |
-| 200xxx | 客户端错误 | 参数错误、认证错误、业务错误、数据操作错误等 |
+| :---: | :---: | :--- |
+| **100xxx** | 服务端错误 | 内部服务器错误 |
+| **200xxx** | 客户端错误 | 参数错误、认证错误、业务错误、数据操作错误等 |
 
 ### 错误码定义
 
 在 `errcode/code.go` 中定义的全部错误码：
 
 | 常量名 | 错误码 | 分类 | 中文消息 |
-| --- | --- | --- | --- |
+| :---: | :---: | :---: | :--- |
 | `ServerError` | 100001 | 服务端 | 内部服务器错误 |
 | `AuthorizationError` | 200001 | 客户端 | 签名信息错误 |
 | `ParamBindError` | 200002 | 客户端 | 参数信息错误 |
@@ -1143,6 +1355,9 @@ middleware.NewMiddlewareFuncWithDependencies(
 
 `errcode/vars.go` 为每个错误码预创建了 `BusinessError` 实例，推荐直接使用：
 
+<details>
+<summary>📝 查看预创建错误变量</summary>
+
 ```go
 var (
     ErrServerError          = New(ServerError)
@@ -1161,7 +1376,12 @@ var (
 )
 ```
 
+</details>
+
 ### 使用错误码
+
+<details>
+<summary>📝 查看错误码使用示例</summary>
 
 ```go
 // 返回预定义错误（使用 Err* 变量，推荐）
@@ -1180,10 +1400,12 @@ return errcode.ErrServerError.WithStackError(err)
 return errcode.ErrServerError.Alert()
 ```
 
+</details>
+
 ### HTTP 状态码映射
 
 | 错误码 | HTTP 状态码 |
-| --- | --- |
+| :---: | :---: |
 | ServerError (100001) | 500 |
 | AuthorizationError (200001) | 401 |
 | ParamValidateError (200004) | 422 |
@@ -1191,7 +1413,7 @@ return errcode.ErrServerError.Alert()
 
 ---
 
-## 数据校验
+## 📊 数据校验
 
 ### 校验器使用
 
@@ -1211,7 +1433,7 @@ if err := ctx.Validator(req); err != nil {
 }
 ```
 
-> **注意**: `ctx.Validator()` 返回 `error` 类型（不是 bool），使用 `err != nil` 检查。校验失败时，Validator 会自动调用 `ctx.WithAbortError()` 设置错误响应。
+> ⚠️ **注意**: `ctx.Validator()` 返回 `error` 类型（不是 bool），使用 `err != nil` 检查。校验失败时，Validator 会自动调用 `ctx.WithAbortError()` 设置错误响应。
 
 ### Validator 方法行为
 
@@ -1224,24 +1446,27 @@ if err := ctx.Validator(req); err != nil {
 ### 常用校验规则
 
 | 规则 | 说明 | 示例 |
-| --- | --- | --- |
+| :---: | :--- | :--- |
 | `required` | 必填字段 | `validate:"required"` |
 | `min` | 最小长度/值 | `validate:"min=3"` |
 | `max` | 最大长度/值 | `validate:"max=20"` |
-| `email` | 箱格式 | `validate:"email"` |
+| `email` | 邮箱格式 | `validate:"email"` |
 | `url` | URL 格式 | `validate:"url"` |
 | `numeric` | 数值类型 | `validate:"numeric"` |
 | `omitempty` | 可选字段 | `validate:"omitempty,email"` |
 
-更多校验规则请参考：[validator 文档](https://github.com/go-playground/validator)
+> 💡 **提示**: 更多校验规则请参考：[validator 文档](https://github.com/go-playground/validator)
 
 ---
 
-## 性能优化
+## ⚡ 性能优化
 
 ### Header() 方法性能优化
 
 Header() 方法返回请求头的只读引用，性能最优：
+
+<details>
+<summary>📊 查看性能对比</summary>
 
 ```go
 // Header() 返回只读引用（性能最优）
@@ -1259,9 +1484,14 @@ authHeader := ctx.GetHeader("Authorization")  // 单次查找
 - CloneHeaders()：543.6 ns/op，22 次内存分配（按需使用）
 - GetHeader()：2.6 ns/op，0 次内存分配（单次查找）
 
+</details>
+
 ### RequestContext() 方法性能优化
 
 RequestContext() 方法使用 sync.Once 缓存，多次调用只创建一次：
+
+<details>
+<summary>📊 查看性能对比</summary>
 
 ```go
 // 首次调用：创建并缓存 RequestContext
@@ -1275,9 +1505,14 @@ reqCtx2 := ctx.RequestContext()  // 0.39 ns/op，0 次内存分配
 - 首次调用：230.5 ns/op，6 次内存分配
 - 后续调用：0.39 ns/op，0 次内存分配，性能提升 **99.83%**
 
+</details>
+
 ### RawData() 方法内存安全
 
 RawData() 方法返回副本，避免内存泄漏和数据污染：
+
+<details>
+<summary>📊 查看内存安全特性</summary>
 
 ```go
 // 返回副本，可以安全修改
@@ -1290,13 +1525,18 @@ rawData[0] = 'X'  // 修改副本，不影响原始请求体
 - ✅ 防止 context 对象被放回池中后的数据污染
 - ✅ 提高内存安全性
 
+</details>
+
 ---
 
-## 并发安全性
+## 🔒 并发安全性
 
 ### TraceID() 方法并发安全
 
 TraceID() 方法使用 sync.Once 确保只生成一次：
+
+<details>
+<summary>📊 查看并发安全实现</summary>
 
 ```go
 // 使用 sync.Once 确保只生成一次 TraceID
@@ -1329,9 +1569,14 @@ func (c *context) TraceID() string {
 - ✅ 100 个 goroutine 同时调用 TraceID()，都获取到相同的值
 - ✅ 避免竞态条件，提高并发安全性
 
+</details>
+
 ### RequestContext() 方法并发安全
 
 RequestContext() 方法使用 sync.Once 缓存：
+
+<details>
+<summary>📊 查看并发安全实现</summary>
 
 ```go
 // 使用 sync.Once 缓存 RequestContext
@@ -1350,9 +1595,14 @@ func (c *context) RequestContext() stdCtx.Context {
 - ✅ 多次调用性能提升 592倍
 - ✅ 减少 GC 压力，提高系统性能
 
+</details>
+
 ### Context 对象池
 
 Context 使用 sync.Pool 复用，减少内存分配：
+
+<details>
+<summary>📊 查看对象池实现</summary>
 
 ```go
 // contextPool 是用于复用上下文对象的 sync.Pool
@@ -1389,13 +1639,18 @@ func recoveryContext(ctx Context) {
 - ✅ 对象复用，降低资源消耗
 - ✅ reset() 重置 sync.Once 确保池中对象可安全复用
 
+</details>
+
 ---
 
-## 配置管理
+## ⚙️ 配置管理
 
 ### 配置文件结构
 
 配置文件 `.env.yml` 采用 YAML 格式（注意：字段名与代码中的 YAML struct tag 对应）：
+
+<details>
+<summary>📝 查看完整配置示例</summary>
 
 ```yaml
 environment: dev  # 运行环境: dev/prod
@@ -1485,9 +1740,14 @@ notify:
       to: "xxxxxx@qq.com"
 ```
 
+</details>
+
 ### 多数据库/Redis 配置
 
 支持配置多个数据库或 Redis 连接：
+
+<details>
+<summary>📝 查看多连接配置示例</summary>
 
 ```yaml
 db:
@@ -1521,9 +1781,11 @@ redisConn := dataRepo.Redis("default")
 redisConn := dataRepo.Redis("cache")
 ```
 
+</details>
+
 ---
 
-## 常见问题
+## ❓ 常见问题
 
 ### Q: 如何添加新的数据库连接？
 
@@ -1560,33 +1822,44 @@ A: `Validator()` 返回 `error` 类型（不是 bool）。使用 `err := ctx.Val
 
 ---
 
-## 版本信息
+## 📊 版本信息
 
-- Go 版本：1.23.0+
-- Gin 版本：1.11.0
-- GORM 版本：1.31.1
-- Wire 版本：0.7.0
-- Zap 版本：1.27.0
-
----
-
-## 许可证
-
-MIT License
+| 组件 | 版本 |
+| :---: | :---: |
+| **Go** | 1.23.0+ |
+| **Gin** | 1.11.0 |
+| **GORM** | 1.31.1 |
+| **Wire** | 0.7.0 |
+| **Zap** | 1.27.0 |
 
 ---
 
-## 贡献指南
+## 📄 许可证
+
+本项目采用 [MIT License](https://opensource.org/licenses/MIT) 开源协议。
+
+---
+
+## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request，请遵循以下规范：
 
-1. 代码风格遵循 Go 客方规范
-2. 新功能请添加相应的测试用例
-3. 错误码使用 `errcode.New()` 或 `errcode.Err*` 预创建变量，不要直接对 int 常量调用方法
+> ⚠️ **贡献规范**
+> - 代码风格遵循 Go 官方规范
+> - 新功能请添加相应的测试用例
+> - 错误码使用 `errcode.New()` 或 `errcode.Err*` 预创建变量，不要直接对 int 常量调用方法
 
 ---
 
-## 联系方式
+## 📧 菜系方式
 
-- 作者：raylin666
-- GitHub：https://github.com/raylin666/go-ult-framework
+- **作者**: raylin666
+- **GitHub**: [https://github.com/raylin666/go-ult-framework](https://github.com/raylin666/go-ult-framework)
+
+---
+
+<div align="center">
+
+**如果这个项目对你有帮助，请给一个 ⭐️ Star 支持一下！**
+
+</div>
