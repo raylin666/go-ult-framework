@@ -10,9 +10,9 @@ import (
 	"ult/internal/data/repo"
 )
 
-// HeartbeatStatus 健康检查状态结构体。
+// HeartbeatStatusResponse 健康检查状态结构体。
 // 包含整体状态、时间戳和各组件状态。
-type HeartbeatStatus struct {
+type HeartbeatStatusResponse struct {
 	Status     string                        `json:"status"`               // 整体状态: healthy/degraded/unhealthy
 	Timestamp  string                        `json:"timestamp"`            // 检查时间戳
 	Components map[string]HeartbeatComponent `json:"components,omitempty"` // 各组件状态
@@ -56,10 +56,10 @@ func NewHeartbeatService(dataRepo *data.DataRepo, testRepo repo.TestRepo, tools 
 //   - ctx: 上下文
 //
 // 返回:
-//   - HeartbeatStatus: 健康状态
-func (h *HeartbeatService) State(ctx context.Context) HeartbeatStatus {
+//   - HeartbeatStatusResponse: 健康状态
+func (h *HeartbeatService) State(ctx context.Context) HeartbeatStatusResponse {
 	now := time.Now().Format(time.RFC3339)
-	status := HeartbeatStatus{
+	status := HeartbeatStatusResponse{
 		Status:     "healthy",
 		Timestamp:  now,
 		Components: make(map[string]HeartbeatComponent),
