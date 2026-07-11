@@ -14,7 +14,7 @@ var _ HeartbeatInterface = (*HeartbeatHandler)(nil)
 // HeartbeatInterface 健康检查 API 接口。
 // 定义健康检查相关的 HTTP 处理方法。
 type HeartbeatInterface interface {
-	State() http.HandlerFunc // 获取系统健康状态
+	State(ctx http.Context) // 获取系统健康状态
 }
 
 // HeartbeatHandler 健康检查 API 处理器。
@@ -40,12 +40,7 @@ func NewHeartbeatHandler(service *service.HeartbeatService, tools *app.Tools) He
 
 // State 获取系统健康状态的 HTTP 处理函数。
 // 调用服务层获取数据库和 Redis 连接状态。
-//
-// 返回:
-//   - http.HandlerFunc: HTTP 处理函数
-func (h *HeartbeatHandler) State() http.HandlerFunc {
-	return func(ctx http.Context) {
-		var resp = h.service.State(ctx.RequestContext())
+func (h *HeartbeatHandler) State(ctx http.Context) {
+	var resp = h.service.State(ctx.RequestContext())
 		ctx.WithPayload(resp)
-	}
 }
